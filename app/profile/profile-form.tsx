@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent } from "react";
+import { FormEvent, useState } from "react";
 import {
   completedProfileFields,
   energyOptions,
@@ -16,9 +16,28 @@ import { useSecondProfile } from "@/lib/second/use-second-profile";
 const inputClass =
   "min-h-13 w-full rounded-2xl border border-white/[0.09] bg-white/[0.035] px-4 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-amber-100/35 focus:bg-white/[0.055]";
 
+function optionalNumberInput(value: string, min: number, max: number) {
+  if (!/^\d+$/.test(value)) return undefined;
+  const number = Number(value);
+  return number >= min && number <= max ? number : undefined;
+}
+
 export default function ProfileForm() {
   const router = useRouter();
   const { profile, isHydrated } = useSecondProfile();
+  const [numericDraft, setNumericDraft] = useState<{
+    age?: string;
+    heightCm?: string;
+  }>({});
+
+  const ageInput = numericDraft.age ?? profile.age?.toString() ?? "";
+  const heightInput =
+    numericDraft.heightCm ?? profile.heightCm?.toString() ?? "";
+  const ageIsInvalid =
+    ageInput !== "" && optionalNumberInput(ageInput, 18, 99) === undefined;
+  const heightIsInvalid =
+    heightInput !== "" &&
+    optionalNumberInput(heightInput, 120, 230) === undefined;
 
   function updateProfile<Key extends keyof SecondProfile>(
     key: Key,
@@ -27,8 +46,21 @@ export default function ProfileForm() {
     writeSecondProfile({ ...profile, [key]: value || undefined });
   }
 
+  function updateNumericProfile(
+    key: "age" | "heightCm",
+    rawValue: string,
+    min: number,
+    max: number,
+    maxLength: number,
+  ) {
+    const digits = rawValue.replace(/\D/g, "").slice(0, maxLength);
+    setNumericDraft((current) => ({ ...current, [key]: digits }));
+    updateProfile(key, optionalNumberInput(digits, min, max));
+  }
+
   function continueToSpirits(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (ageIsInvalid || heightIsInvalid) return;
     writeSecondProfile(profile);
     router.push("/spirits");
   }
@@ -87,19 +119,31 @@ export default function ProfileForm() {
               </span>
               <input
                 className={inputClass}
+                aria-describedby={ageIsInvalid ? "age-error" : undefined}
+                aria-invalid={ageIsInvalid}
+                autoComplete="off"
+                enterKeyHint="next"
                 inputMode="numeric"
-                min={18}
-                max={99}
+                maxLength={2}
+                pattern="[0-9]*"
                 placeholder="18+"
-                type="number"
-                value={profile.age ?? ""}
+                type="text"
+                value={ageInput}
                 onChange={(event) =>
-                  updateProfile(
+                  updateNumericProfile(
                     "age",
-                    event.target.value ? Number(event.target.value) : undefined,
+                    event.target.value,
+                    18,
+                    99,
+                    2,
                   )
                 }
               />
+              {ageIsInvalid ? (
+                <span id="age-error" className="text-[0.6rem] text-amber-100/60">
+                  Enter an age from 18 to 99
+                </span>
+              ) : null}
             </label>
 
             <label className="grid gap-2">
@@ -109,16 +153,25 @@ export default function ProfileForm() {
               <div className="relative">
                 <input
                   className={`${inputClass} pr-12`}
+                  aria-describedby={
+                    heightIsInvalid ? "height-error" : undefined
+                  }
+                  aria-invalid={heightIsInvalid}
+                  autoComplete="off"
+                  enterKeyHint="next"
                   inputMode="numeric"
-                  min={120}
-                  max={230}
+                  maxLength={3}
+                  pattern="[0-9]*"
                   placeholder="170"
-                  type="number"
-                  value={profile.heightCm ?? ""}
+                  type="text"
+                  value={heightInput}
                   onChange={(event) =>
-                    updateProfile(
+                    updateNumericProfile(
                       "heightCm",
-                      event.target.value ? Number(event.target.value) : undefined,
+                      event.target.value,
+                      120,
+                      230,
+                      3,
                     )
                   }
                 />
@@ -126,6 +179,14 @@ export default function ProfileForm() {
                   cm
                 </span>
               </div>
+              {heightIsInvalid ? (
+                <span
+                  id="height-error"
+                  className="text-[0.6rem] text-amber-100/60"
+                >
+                  Enter a height from 120 to 230 cm
+                </span>
+              ) : null}
             </label>
 
             <label className="grid gap-2">
