@@ -1,0 +1,58 @@
+export const ingredientPools = {
+  citrus: ["Lemon Juice", "Lime Juice", "Grapefruit Juice"],
+  sweeteners: [
+    "Simple Syrup",
+    "Honey Syrup",
+    "Agave Syrup",
+    "Demerara Syrup",
+  ],
+  fruit: [
+    "Pineapple Juice",
+    "Passion Fruit Puree",
+    "Orange Juice",
+    "Cranberry Juice",
+    "Peach Puree",
+    "Raspberry Puree",
+  ],
+  liqueurs: [
+    "Elderflower Liqueur",
+    "Orange Liqueur",
+    "Coffee Liqueur",
+    "Maraschino Liqueur",
+  ],
+  bitters: ["Angostura Bitters", "Orange Bitters"],
+  herbs: ["Basil", "Mint", "Rosemary", "Cucumber"],
+  longMixers: ["Soda Water", "Tonic Water", "Ginger Beer"],
+  bitterModifiers: ["Campari", "Aperol", "Sweet Vermouth", "Dry Vermouth"],
+} as const;
+
+export const signatureNames = {
+  prefixes: [
+    "Midnight",
+    "Velvet",
+    "Neon",
+    "Silent",
+    "Electric",
+    "After",
+    "Golden",
+    "Blue",
+    "Lost",
+    "Wild",
+    "Night",
+    "Secret",
+  ],
+  suffixes: [
+    "Garden",
+    "Signal",
+    "Hour",
+    "Echo",
+    "Bloom",
+    "Static",
+    "Sunset",
+    "No. 7",
+    "Dream",
+    "Ritual",
+    "Wave",
+    "Room",
+  ],
+} as const;

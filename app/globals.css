@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+:root {
+  background: #090909;
+  color: #f5f5f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #090909;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(120, 98, 72, 0.12), transparent 36rem),
+    linear-gradient(180deg, #0d0d0d 0%, #070707 100%);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.mixing-copy {
+  animation: mixing-copy 1.45s ease-in-out infinite;
+}
+
+.mixing-glow {
+  animation: mixing-glow 1.8s ease-in-out infinite;
+}
+
+.reveal-glow {
+  opacity: 0;
+  animation: reveal-glow 1.4s ease-out 300ms forwards;
+}
+
+.reveal-liquid {
+  opacity: 0;
+  animation:
+    reveal-liquid-in 1.3s ease-out 500ms forwards,
+    reveal-liquid-drift 8s ease-in-out 1.8s infinite alternate;
+}
+
+.reveal-liquid-two {
+  animation-delay: 650ms, 2s;
+}
+
+.reveal-item {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translateY(12px);
+  animation: reveal-item 720ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.reveal-mode {
+  animation-delay: 600ms;
+}
+
+.reveal-name {
+  animation-delay: 880ms;
+}
+
+.reveal-selection {
+  animation-delay: 1220ms;
+}
+
+.reveal-caption {
+  animation-delay: 1500ms;
+}
+
+.reveal-scroll-cue {
+  opacity: 0;
+  animation:
+    reveal-scroll-in 500ms ease-out 1750ms forwards,
+    reveal-scroll-drift 1.8s ease-in-out 2.3s infinite;
+}
+
+.match-reveal > * {
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(10px);
+  animation: match-item 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.match-reveal > :nth-child(2) {
+  animation-delay: 180ms;
+}
+
+.match-reveal > :nth-child(3) {
+  animation-delay: 320ms;
+}
+
+.match-reveal > :nth-child(n + 4) {
+  animation-delay: 480ms;
+}
+
+@keyframes mixing-copy {
+  0%,
+  100% {
+    opacity: 0.34;
+    letter-spacing: 0.34em;
+  }
+  50% {
+    opacity: 0.72;
+    letter-spacing: 0.39em;
+  }
+}
+
+@keyframes mixing-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes reveal-glow {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.78);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes reveal-liquid-in {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: translateY(20px) rotate(10deg) scale(0.94);
+  }
+  to {
+    opacity: 0.55;
+    filter: blur(1px);
+    transform: translateY(0) rotate(12deg) scale(1);
+  }
+}
+
+@keyframes reveal-liquid-drift {
+  from {
+    translate: 0 -4px;
+  }
+  to {
+    translate: -8px 8px;
+  }
+}
+
+@keyframes reveal-item {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-scroll-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-scroll-drift {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+  50% {
+    transform: translate(-50%, 4px);
+  }
+}
+
+@keyframes match-item {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mixing-copy,
+  .mixing-glow,
+  .reveal-glow,
+  .reveal-liquid,
+  .reveal-item,
+  .reveal-scroll-cue {
+    animation-delay: 0ms;
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+  }
+
+  .match-reveal > * {
+    animation-delay: 0ms;
+    animation-duration: 1ms;
+  }
+}
