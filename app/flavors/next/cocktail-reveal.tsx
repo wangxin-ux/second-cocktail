@@ -38,7 +38,7 @@ export default function CocktailReveal({
   );
   const aura = profileAura(profile);
   const { language, t } = useI18n();
-  const localizedMode = generationMode === "local" ? t("signature") : generationMode === "ai" ? t("aiSignature") : t("classic");
+  const localizedMode = generationMode === "fixed" ? t("fixedRecipe") : generationMode === "local" ? t("signature") : generationMode === "ai" ? t("aiSignature") : t("classic");
 
   return (
     <section className="relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden px-5 pb-[max(4.5rem,env(safe-area-inset-bottom))] pt-[max(3.5rem,env(safe-area-inset-top))] sm:px-8">

@@ -23,6 +23,7 @@ function CocktailResultPageContent() {
   const searchParams = useSearchParams();
   const spiritId = searchParams.get("spirit") ?? undefined;
   const flavorId = searchParams.get("flavor") ?? undefined;
+  const variantIndex = Number(searchParams.get("variant") ?? "1");
   const selectedSpirit = getSpirit(spiritId);
   const selectedFlavor = getFlavor(flavorId);
 
@@ -36,12 +37,13 @@ function CocktailResultPageContent() {
     }
   }, [router, selectedFlavor, selectedSpirit]);
 
-  if (!selectedSpirit || !selectedFlavor) return <RoutingState />;
+  if (!selectedSpirit || !selectedFlavor || !Number.isInteger(variantIndex) || variantIndex < 1 || variantIndex > 3) return <RoutingState />;
 
   return (
     <CocktailResult
       spirit={selectedSpirit}
       flavor={selectedFlavor}
+      variantIndex={variantIndex}
     />
   );
 }

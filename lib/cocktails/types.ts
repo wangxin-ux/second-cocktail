@@ -15,9 +15,14 @@ export type CocktailRecipe = {
   glass?: string;
   garnish?: string;
   source?: string;
+  liqueurs?: string[];
+  allergens?: string[];
+  caffeineFlag?: boolean;
+  availability?: boolean;
+  version?: string;
 };
 
-export type GenerationMode = "local" | "ai" | "classic";
+export type GenerationMode = "local" | "ai" | "classic" | "fixed";
 
 export type CocktailGenerationResponse = {
   recipe: CocktailRecipe;

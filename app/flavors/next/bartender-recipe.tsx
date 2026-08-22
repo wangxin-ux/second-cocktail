@@ -58,6 +58,14 @@ export default function BartenderRecipe({
           {recipe.name}
         </h2>
 
+        {(recipe.allergens?.length || recipe.caffeineFlag || recipe.liqueurs?.length) ? (
+          <section className="mt-7 rounded-2xl border border-amber-100/[0.16] bg-amber-100/[0.045] p-4 text-sm leading-6 text-amber-50/75">
+            {recipe.liqueurs?.length ? <p><span className="font-semibold text-amber-100">{t("contains")}:</span> {recipe.liqueurs.join(" · ")}</p> : null}
+            {recipe.allergens?.length ? <p><span className="font-semibold text-amber-100">{t("allergens")}:</span> {recipe.allergens.join(" / ")}</p> : null}
+            {recipe.caffeineFlag ? <p><span className="font-semibold text-amber-100">{t("caffeine")}</span></p> : null}
+          </section>
+        ) : null}
+
         <section className="mt-12">
           <h3 className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/30">
             {t("ingredients")}

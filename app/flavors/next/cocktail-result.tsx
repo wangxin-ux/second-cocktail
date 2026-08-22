@@ -7,13 +7,13 @@ import type { CocktailGenerationResponse } from "@/lib/cocktails/types";
 import { generateBrowserCocktail } from "@/lib/cocktails/browser-generator";
 import BartenderRecipe from "./bartender-recipe";
 import CocktailReveal from "./cocktail-reveal";
-import { profileSignature } from "@/lib/second/profile";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
 import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 
 type CocktailResultProps = {
   spirit: { id: SpiritId; name: string };
   flavor: { id: FlavorId; name: string };
+  variantIndex: number;
 };
 
 function minimumMixingTime() {
@@ -46,6 +46,7 @@ function MixingState({
 export default function CocktailResult({
   spirit,
   flavor,
+  variantIndex,
 }: CocktailResultProps) {
   const requestStarted = useRef(false);
   const requestInFlight = useRef(false);
@@ -74,9 +75,7 @@ export default function CocktailResult({
           generateBrowserCocktail({
             spirit: spirit.id,
             flavor: flavor.id,
-            signatureSeed: profileSignature(profile),
-            variation:
-              window.crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+            variantIndex,
           }),
         ),
         minimumMixingTime(),
@@ -89,15 +88,14 @@ export default function CocktailResult({
         generateBrowserCocktail({
           spirit: spirit.id,
           flavor: flavor.id,
-          signatureSeed: profileSignature(profile),
-          variation: "fallback",
+          variantIndex,
         }),
       );
     } finally {
       requestInFlight.current = false;
       setIsGenerating(false);
     }
-  }, [flavor.id, profile, spirit.id]);
+  }, [flavor.id, spirit.id, variantIndex]);
 
   useEffect(() => {
     if (!profileReady || requestStarted.current) return;
