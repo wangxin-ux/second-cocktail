@@ -13,7 +13,6 @@ import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 type CocktailResultProps = {
   spirit: { id: SpiritId; name: string };
   flavor: { id: FlavorId; name: string };
-  variantIndex: number;
 };
 
 function minimumMixingTime() {
@@ -46,7 +45,6 @@ function MixingState({
 export default function CocktailResult({
   spirit,
   flavor,
-  variantIndex,
 }: CocktailResultProps) {
   const requestStarted = useRef(false);
   const requestInFlight = useRef(false);
@@ -75,7 +73,6 @@ export default function CocktailResult({
           generateBrowserCocktail({
             spirit: spirit.id,
             flavor: flavor.id,
-            variantIndex,
           }),
         ),
         minimumMixingTime(),
@@ -88,14 +85,13 @@ export default function CocktailResult({
         generateBrowserCocktail({
           spirit: spirit.id,
           flavor: flavor.id,
-          variantIndex,
         }),
       );
     } finally {
       requestInFlight.current = false;
       setIsGenerating(false);
     }
-  }, [flavor.id, spirit.id, variantIndex]);
+  }, [flavor.id, spirit.id]);
 
   useEffect(() => {
     if (!profileReady || requestStarted.current) return;

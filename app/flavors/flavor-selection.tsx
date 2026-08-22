@@ -21,7 +21,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
   function generateCocktail() {
     if (!selectedFlavor || isNavigating) return;
     setIsNavigating(true);
-    router.push(`/flavors/variants?spirit=${spirit.id}&flavor=${selectedFlavor}`);
+    router.push(`/flavors/next?spirit=${spirit.id}&flavor=${selectedFlavor}`);
   }
 
   return (
@@ -156,7 +156,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
             onClick={generateCocktail}
             className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold tracking-[-0.01em] text-neutral-950 transition-all duration-200 enabled:hover:bg-stone-200 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.055] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-          {isNavigating ? t("preparing") : t("chooseRecipe")}
+          {isNavigating ? t("preparing") : t("generate")}
           </button>
         </div>
       </div>
