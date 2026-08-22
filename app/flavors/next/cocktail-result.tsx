@@ -9,6 +9,7 @@ import BartenderRecipe from "./bartender-recipe";
 import CocktailReveal from "./cocktail-reveal";
 import { profileSignature } from "@/lib/second/profile";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
+import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 
 type CocktailResultProps = {
   spirit: { id: SpiritId; name: string };
@@ -23,6 +24,7 @@ function MixingState({
   spirit,
   flavor,
 }: Pick<CocktailResultProps, "spirit" | "flavor">) {
+  const { language, t } = useI18n();
   return (
     <main className="relative flex min-h-[100svh] items-center justify-center overflow-hidden bg-[#070707] px-6">
       <div
@@ -31,10 +33,10 @@ function MixingState({
       />
       <div className="relative z-10 text-center" role="status" aria-live="polite">
         <p className="mixing-copy text-[0.62rem] font-semibold uppercase tracking-[0.34em] text-white/58">
-          Mixing something unexpected
+          {t("mixing")}
         </p>
         <p className="mt-4 text-[0.54rem] font-semibold uppercase tracking-[0.3em] text-white/20">
-          {spirit.name} × {flavor.name}
+          {localizeSpirit(spirit.id, spirit.name, language)} × {localizeFlavor(flavor.id, flavor.name, language)}
         </p>
       </div>
     </main>

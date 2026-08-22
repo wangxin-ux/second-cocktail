@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Spirit } from "../spirits/spirits";
 import { flavors, type FlavorId } from "./flavors";
+import LanguageToggle from "../language-toggle";
+import { localizeFlavor, localizeFlavorDescription, localizeSpirit, useI18n } from "@/lib/i18n";
 
 type FlavorSelectionProps = {
   spirit: Pick<Spirit, "id" | "name">;
@@ -14,6 +16,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
   const router = useRouter();
   const [selectedFlavor, setSelectedFlavor] = useState<FlavorId | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const { language, t } = useI18n();
 
   function generateCocktail() {
     if (!selectedFlavor || isNavigating) return;
@@ -42,35 +45,38 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
             >
               ←
             </span>
-            Back
+            {t("back")}
           </Link>
 
-          <span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">
-            Step 03
-          </span>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">
+              {t("flavorStep")}
+            </span>
+          </div>
         </header>
 
         <section className="pb-5 pt-6">
           <h1 className="max-w-xs text-[2.35rem] font-medium leading-[0.98] tracking-[-0.055em] text-stone-100 sm:text-[2.65rem]">
-            What are you craving?
+            {t("craving")}
           </h1>
           <p className="mt-3 text-sm tracking-[-0.01em] text-white/45">
-            Choose the mood of your drink.
+            {t("flavorBody")}
           </p>
 
-          <div className="mt-4 flex items-center gap-2.5" aria-label={`Base ${spirit.name}`}>
+          <div className="mt-4 flex items-center gap-2.5" aria-label={`${t("base")} ${localizeSpirit(spirit.id, spirit.name, language)}`}>
             <span className="text-[0.57rem] font-semibold uppercase tracking-[0.24em] text-white/25">
-              Base
+              {t("base")}
             </span>
             <span className="h-px w-5 bg-white/10" />
             <span className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-white/48">
-              {spirit.name}
+              {localizeSpirit(spirit.id, spirit.name, language)}
             </span>
           </div>
         </section>
 
         <div
-          aria-label="Flavor"
+          aria-label={t("craving")}
           className="grid grid-cols-2 gap-2"
           role="radiogroup"
         >
@@ -129,14 +135,14 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
                         isSelected ? "text-white" : "text-white/78"
                       }`}
                     >
-                      {flavor.name}
+                      {localizeFlavor(flavor.id, flavor.name, language)}
                     </span>
                     <span
                       className={`mt-1 block text-[0.65rem] leading-tight tracking-[0.025em] transition-colors ${
                         isSelected ? "text-white/62" : "text-white/30"
                       }`}
                     >
-                      {flavor.description}
+                      {localizeFlavorDescription(flavor.id, flavor.description, language)}
                     </span>
                   </span>
                 </span>
@@ -152,7 +158,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
             onClick={generateCocktail}
             className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold tracking-[-0.01em] text-neutral-950 transition-all duration-200 enabled:hover:bg-stone-200 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.055] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            {isNavigating ? "Preparing…" : "Generate Cocktail"}
+            {isNavigating ? t("preparing") : t("generate")}
           </button>
         </div>
       </div>

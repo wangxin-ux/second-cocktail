@@ -12,6 +12,8 @@ import {
   zodiacOptions,
 } from "@/lib/second/profile";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
+import LanguageToggle from "../language-toggle";
+import { localizeEnergy, useI18n } from "@/lib/i18n";
 
 const inputClass =
   "min-h-13 w-full rounded-2xl border border-white/[0.09] bg-white/[0.035] px-4 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:border-amber-100/35 focus:bg-white/[0.055]";
@@ -25,6 +27,7 @@ function optionalNumberInput(value: string, min: number, max: number) {
 export default function ProfileForm() {
   const router = useRouter();
   const { profile, isHydrated } = useSecondProfile();
+  const { language, t } = useI18n();
   const [numericDraft, setNumericDraft] = useState<{
     age?: string;
     heightCm?: string;
@@ -78,23 +81,20 @@ export default function ProfileForm() {
             className="group inline-flex min-h-10 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             <span aria-hidden="true">←</span>
-            Back
+            {t("back")}
           </Link>
-          <span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">
-            Step 01
-          </span>
+          <div className="flex items-center gap-3"><LanguageToggle /><span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">{t("profileStep")}</span></div>
         </header>
 
         <section className="pb-7 pt-6">
           <p className="text-[0.62rem] font-semibold uppercase tracking-[0.34em] text-white/30">
-            Your second profile
+            {t("profileEyebrow")}
           </p>
           <h1 className="mt-3 max-w-sm text-[2.45rem] font-medium leading-[0.96] tracking-[-0.06em] text-stone-100 sm:text-[2.8rem]">
-            Tell us a little. Or nothing at all.
+            {t("profileTitle")}
           </h1>
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/42">
-            Up to six optional signals shape your drink and tonight&apos;s match.
-            For this demo, they stay in this browser session.
+            {t("profileBody")}
           </p>
         </section>
 
@@ -102,12 +102,12 @@ export default function ProfileForm() {
           <div className="grid grid-cols-2 gap-3">
             <label className="col-span-2 grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                Nickname
+                {t("nickname")}
               </span>
               <input
                 className={inputClass}
                 maxLength={24}
-                placeholder="What should we call you?"
+                placeholder={t("nicknamePlaceholder")}
                 value={profile.nickname ?? ""}
                 onChange={(event) => updateProfile("nickname", event.target.value)}
               />
@@ -115,7 +115,7 @@ export default function ProfileForm() {
 
             <label className="grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                Age
+                {t("age")}
               </span>
               <input
                 className={inputClass}
@@ -141,14 +141,14 @@ export default function ProfileForm() {
               />
               {ageIsInvalid ? (
                 <span id="age-error" className="text-[0.6rem] text-amber-100/60">
-                  Enter an age from 18 to 99
+                  {t("ageError")}
                 </span>
               ) : null}
             </label>
 
             <label className="grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                Height
+                {t("height")}
               </span>
               <div className="relative">
                 <input
@@ -184,14 +184,14 @@ export default function ProfileForm() {
                   id="height-error"
                   className="text-[0.6rem] text-amber-100/60"
                 >
-                  Enter a height from 120 to 230 cm
+                  {t("heightError")}
                 </span>
               ) : null}
             </label>
 
             <label className="grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                Zodiac
+                {t("zodiac")}
               </span>
               <select
                 className={inputClass}
@@ -203,7 +203,7 @@ export default function ProfileForm() {
                   )
                 }
               >
-                <option value="">Optional</option>
+                <option value="">{t("optional")}</option>
                 {zodiacOptions.map((zodiac) => (
                   <option key={zodiac} value={zodiac}>
                     {zodiac}
@@ -226,7 +226,7 @@ export default function ProfileForm() {
                   )
                 }
               >
-                <option value="">Optional</option>
+                <option value="">{t("optional")}</option>
                 {mbtiOptions.map((mbti) => (
                   <option key={mbti} value={mbti}>
                     {mbti}
@@ -237,7 +237,7 @@ export default function ProfileForm() {
 
             <label className="col-span-2 grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                Tonight&apos;s energy
+                {t("energy")}
               </span>
               <select
                 className={inputClass}
@@ -249,10 +249,10 @@ export default function ProfileForm() {
                   )
                 }
               >
-                <option value="">Optional</option>
+                <option value="">{t("optional")}</option>
                 {energyOptions.map((energy) => (
                   <option key={energy.id} value={energy.id}>
-                    {energy.label}
+                    {localizeEnergy(energy.id, energy.label, language)}
                   </option>
                 ))}
               </select>
@@ -264,12 +264,12 @@ export default function ProfileForm() {
               className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold text-neutral-950 transition-all hover:bg-stone-200 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
               type="submit"
             >
-              Continue
+              {t("continue")}
             </button>
             <p className="mt-3 text-center text-[0.6rem] tracking-[0.08em] text-white/25">
               {isHydrated && completedProfileFields(profile) > 0
-                ? `${completedProfileFields(profile)} of 6 added · all editable`
-                : "Skip all fields and continue if you prefer"}
+                ? t("profileSaved", { count: completedProfileFields(profile) })
+                : t("profileSkip")}
             </p>
           </div>
         </form>

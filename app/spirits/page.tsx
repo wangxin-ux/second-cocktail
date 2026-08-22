@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { spirits, type SpiritId } from "./spirits";
+import LanguageToggle from "../language-toggle";
+import { localizeSpirit, localizeSpiritProfile, useI18n } from "@/lib/i18n";
 
 export default function SpiritSelectionPage() {
   const router = useRouter();
   const [selectedSpirit, setSelectedSpirit] = useState<SpiritId | null>(null);
+  const { language, t } = useI18n();
 
   function continueToNextStep() {
     if (!selectedSpirit) return;
@@ -33,28 +36,31 @@ export default function SpiritSelectionPage() {
             >
               ←
             </span>
-            Back
+            {t("back")}
           </Link>
 
-          <span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">
-            Step 02
-          </span>
+          <div className="flex items-center gap-3">
+            <LanguageToggle />
+            <span className="text-[0.62rem] font-semibold uppercase tracking-[0.32em] text-amber-100/55">
+              {t("spiritStep")}
+            </span>
+          </div>
         </header>
 
         <section className="pb-5 pt-6">
           <p className="mb-2 text-[0.65rem] font-medium uppercase tracking-[0.26em] text-white/35">
-            Base Spirit
+            {t("baseSpirit")}
           </p>
           <h1 className="text-[2.35rem] font-medium leading-none tracking-[-0.055em] text-stone-100 sm:text-[2.65rem]">
-            Choose your spirit.
+            {t("chooseSpirit")}
           </h1>
           <p className="mt-3 text-sm tracking-[-0.01em] text-white/45">
-            Every night starts with a base.
+            {t("spiritBody")}
           </p>
         </section>
 
         <div
-          aria-label="Base spirit"
+          aria-label={t("baseSpirit")}
           className="grid gap-1.5"
           role="radiogroup"
         >
@@ -88,14 +94,14 @@ export default function SpiritSelectionPage() {
                       isSelected ? "text-white" : "text-white/78"
                     }`}
                   >
-                    {spirit.name}
+                    {localizeSpirit(spirit.id, spirit.name, language)}
                   </span>
                   <span
                     className={`shrink-0 text-[0.69rem] tracking-[0.04em] transition-colors ${
                       isSelected ? "text-amber-50/70" : "text-white/30"
                     }`}
                   >
-                    {spirit.profile}
+                    {localizeSpiritProfile(spirit.id, spirit.profile, language)}
                   </span>
                 </span>
 
@@ -117,7 +123,7 @@ export default function SpiritSelectionPage() {
             onClick={continueToNextStep}
             className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold tracking-[-0.01em] text-neutral-950 transition-all duration-200 enabled:hover:bg-stone-200 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.055] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            Continue
+            {t("continue")}
           </button>
         </div>
       </div>

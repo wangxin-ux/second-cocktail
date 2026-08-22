@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CocktailRecipe } from "@/lib/cocktails/types";
+import { useI18n } from "@/lib/i18n";
 
 type BartenderRecipeProps = {
   recipe: CocktailRecipe;
@@ -10,9 +11,11 @@ type BartenderRecipeProps = {
 
 function formatAmount(
   ingredient: CocktailRecipe["ingredients"][number],
+  toTaste: string,
+  topUp: string,
 ) {
   if (ingredient.amountMl !== undefined) return `${ingredient.amountMl} ml`;
-  if (!ingredient.amountText) return "To taste";
+  if (!ingredient.amountText) return toTaste;
 
   const escapedName = ingredient.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const conciseAmount = ingredient.amountText
@@ -22,8 +25,8 @@ function formatAmount(
 
   if (conciseAmount) return conciseAmount;
   return /soda|tonic|ginger beer/i.test(ingredient.name)
-    ? "Top up"
-    : "To taste";
+    ? topUp
+    : toTaste;
 }
 
 function methodSteps(method: string) {
@@ -39,6 +42,7 @@ export default function BartenderRecipe({
   onMakeAnother,
   matchHref,
 }: BartenderRecipeProps) {
+  const { t } = useI18n();
   const steps = methodSteps(recipe.method);
 
   return (
@@ -48,7 +52,7 @@ export default function BartenderRecipe({
     >
       <div className="mx-auto w-full max-w-xl">
         <p className="text-[0.58rem] font-semibold uppercase tracking-[0.34em] text-amber-100/45">
-          For the bartender
+          {t("bartender")}
         </p>
         <h2 className="mt-4 text-[2rem] font-medium leading-none tracking-[-0.05em] text-stone-100 sm:text-[2.45rem]">
           {recipe.name}
@@ -56,7 +60,7 @@ export default function BartenderRecipe({
 
         <section className="mt-12">
           <h3 className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/30">
-            Ingredients
+            {t("ingredients")}
           </h3>
           <ul className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.08]">
             {recipe.ingredients.map((ingredient, index) => (
@@ -68,7 +72,7 @@ export default function BartenderRecipe({
                   {ingredient.name}
                 </span>
                 <span className="text-right text-[0.94rem] font-semibold tabular-nums text-stone-100">
-                  {formatAmount(ingredient)}
+                  {formatAmount(ingredient, t("toTaste"), t("topUp"))}
                 </span>
               </li>
             ))}
@@ -77,7 +81,7 @@ export default function BartenderRecipe({
 
         <section className="mt-10">
           <h3 className="text-[0.6rem] font-semibold uppercase tracking-[0.3em] text-white/30">
-            Method
+            {t("method")}
           </h3>
           <ol className="mt-4 space-y-2.5">
             {steps.map((step, index) => (
@@ -97,38 +101,37 @@ export default function BartenderRecipe({
         <dl className="mt-10 grid grid-cols-2 gap-3 border-y border-white/[0.08] py-5">
           <div>
             <dt className="text-[0.58rem] font-semibold uppercase tracking-[0.28em] text-white/28">
-              Glass
+              {t("glass")}
             </dt>
             <dd className="mt-2 text-sm font-medium text-white/75">
-              {recipe.glass ?? "Not specified"}
+              {recipe.glass ?? t("notSpecified")}
             </dd>
           </div>
           <div>
             <dt className="text-[0.58rem] font-semibold uppercase tracking-[0.28em] text-white/28">
-              Garnish
+              {t("garnish")}
             </dt>
             <dd className="mt-2 text-sm font-medium leading-5 text-white/75">
-              {recipe.garnish ?? "Not specified"}
+              {recipe.garnish ?? t("notSpecified")}
             </dd>
           </div>
         </dl>
 
         <section className="mt-12 rounded-[1.5rem] border border-amber-100/[0.12] bg-amber-100/[0.035] p-5">
           <p className="text-[0.57rem] font-semibold uppercase tracking-[0.3em] text-amber-100/45">
-            Tonight at second
+            {t("matchEyebrow")}
           </p>
           <h3 className="mt-3 text-xl font-medium tracking-[-0.04em] text-stone-100">
-            One drink. One person worth meeting.
+            {t("matchTitle")}
           </h3>
           <p className="mt-2 text-xs leading-5 text-white/38">
-            Use your profile and drink mood to discover who you should know in
-            this room tonight.
+            {t("matchBody")}
           </p>
           <Link
             href={matchHref}
             className="mt-5 flex min-h-13 w-full items-center justify-center rounded-full bg-amber-50 px-5 text-sm font-semibold text-neutral-950 transition-all hover:bg-white active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            Find My Tonight Match
+            {t("findMatch")}
           </Link>
         </section>
 
@@ -139,13 +142,13 @@ export default function BartenderRecipe({
             onClick={onMakeAnother}
             className="min-h-14 w-full rounded-full bg-stone-100 px-6 text-sm font-semibold text-neutral-950 transition-all duration-200 enabled:hover:bg-white enabled:active:scale-[0.99] disabled:cursor-wait disabled:bg-white/15 disabled:text-white/35 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            {isGenerating ? "Mixing…" : "Make Another"}
+            {isGenerating ? t("mixingShort") : t("makeAnother")}
           </button>
           <Link
             href="/"
             className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/[0.11] px-6 text-sm font-semibold text-white/55 transition-colors hover:border-white/25 hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            Start Over
+            {t("startOver")}
           </Link>
         </div>
       </div>
