@@ -34,6 +34,7 @@ export default function CocktailReveal({
   flavor,
   profile,
 }: CocktailRevealProps) {
+  const [isTarotOpen, setIsTarotOpen] = useState(true);
   const [caption] = useState(
     () => atmosphereCopy[Math.floor(Math.random() * atmosphereCopy.length)]!,
   );
@@ -75,16 +76,32 @@ export default function CocktailReveal({
           </p>
         ) : null}
 
-        <div className="reveal-item reveal-tarot mt-8 flex justify-center">
-          <CocktailTarotCard
-            cocktailName={cocktailName}
-            spirit={spirit.id}
-            flavor={flavor.id}
-            profile={profile}
-            language={language}
-          />
-        </div>
       </div>
+
+      {isTarotOpen ? (
+        <div className="tarot-draw" role="dialog" aria-modal="true" aria-label={language === "zh" ? "你的鸡尾酒塔罗牌" : "Your cocktail tarot card"}>
+          <div className="tarot-draw__intro">
+            <span>{language === "zh" ? "为你抽出" : "DRAWN FOR YOU"}</span>
+            <span aria-hidden="true">✦</span>
+          </div>
+          <div className="reveal-item reveal-tarot flex justify-center" style={{ width: "min(100%, 18.5rem)" }}>
+            <CocktailTarotCard
+              cocktailName={cocktailName}
+              spirit={spirit.id}
+              flavor={flavor.id}
+              profile={profile}
+              language={language}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsTarotOpen(false)}
+            className="tarot-draw__dismiss"
+          >
+            {language === "zh" ? "收下这张牌，查看配方" : "KEEP THIS CARD · VIEW RECIPE"}
+          </button>
+        </div>
+      ) : null}
 
       <a
         href="#bartender-recipe"
