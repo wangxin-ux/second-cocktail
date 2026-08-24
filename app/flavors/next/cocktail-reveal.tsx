@@ -8,6 +8,7 @@ import RevealBackground from "./reveal-background";
 import { profileAura, type SecondProfile } from "@/lib/second/profile";
 import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 import LanguageToggle from "../../language-toggle";
+import CocktailTarotCard from "./cocktail-tarot-card";
 
 const atmosphereCopy = [
   "Made for tonight.",
@@ -73,6 +74,16 @@ export default function CocktailReveal({
             {aura.join(" × ")}
           </p>
         ) : null}
+
+        <div className="reveal-item reveal-tarot mt-8 flex justify-center">
+          <CocktailTarotCard
+            cocktailName={cocktailName}
+            spirit={spirit.id}
+            flavor={flavor.id}
+            profile={profile}
+            language={language}
+          />
+        </div>
       </div>
 
       <a
