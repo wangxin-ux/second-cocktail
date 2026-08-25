@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import LanguageProvider from "./language-provider";
+import LiveMatchProvider from "./live-match-provider";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -25,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased`}><LanguageProvider>{children}</LanguageProvider></body>
+      <body className={`${manrope.variable} antialiased`}><LanguageProvider><LiveMatchProvider>{children}</LiveMatchProvider></LanguageProvider></body>
     </html>
   );
 }

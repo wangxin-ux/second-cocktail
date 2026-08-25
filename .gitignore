@@ -24,6 +24,10 @@ yarn-error.log*
 # local QA artifacts
 /artifacts/
 
+# generated QR codes
+/second-cocktail*.png
+/social-talk-browser-test-qr.png
+
 # vercel
 .vercel
 
