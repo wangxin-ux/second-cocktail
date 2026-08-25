@@ -50,9 +50,30 @@ export type SecondProfile = {
   zodiac?: Zodiac;
   mbti?: Mbti;
   energy?: TonightEnergy;
+  meetingLocation?: string;
 };
 
 export const secondProfileStorageKey = "second:profile:v1";
+export const secondProfileCookieKey = "second_profile_v1";
+export const secondCookieMaxAgeSeconds = 30 * 60;
+
+export function readCookieValue(name: string) {
+  if (typeof document === "undefined") return "";
+  const prefix = `${name}=`;
+  const part = document.cookie.split("; ").find((item) => item.startsWith(prefix));
+  if (!part) return "";
+  try { return decodeURIComponent(part.slice(prefix.length)); } catch { return ""; }
+}
+
+export function writeTemporaryCookie(name: string, value: string) {
+  if (typeof document === "undefined") return;
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${secondCookieMaxAgeSeconds}; SameSite=Lax${secure}`;
+}
+
+export function readSecondProfileRaw() {
+  return readCookieValue(secondProfileCookieKey);
+}
 
 function optionalNumber(value: unknown, min: number, max: number) {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
@@ -70,6 +91,9 @@ export function sanitizeProfile(value: unknown): SecondProfile {
   const zodiac = zodiacOptions.find((item) => item === profile.zodiac);
   const mbti = mbtiOptions.find((item) => item === profile.mbti);
   const energy = energyOptions.find((item) => item.id === profile.energy)?.id;
+  const meetingLocation = typeof profile.meetingLocation === "string"
+    ? profile.meetingLocation.trim().slice(0, 80)
+    : "";
 
   return {
     ...(nickname ? { nickname } : {}),
@@ -82,6 +106,7 @@ export function sanitizeProfile(value: unknown): SecondProfile {
     ...(zodiac ? { zodiac } : {}),
     ...(mbti ? { mbti } : {}),
     ...(energy ? { energy } : {}),
+    ...(meetingLocation ? { meetingLocation } : {}),
   };
 }
 
@@ -89,7 +114,7 @@ export function readSecondProfile(): SecondProfile {
   if (typeof window === "undefined") return {};
 
   try {
-    const stored = window.sessionStorage.getItem(secondProfileStorageKey);
+    const stored = readSecondProfileRaw();
     return stored ? sanitizeProfile(JSON.parse(stored)) : {};
   } catch {
     return {};
@@ -98,10 +123,8 @@ export function readSecondProfile(): SecondProfile {
 
 export function writeSecondProfile(profile: SecondProfile) {
   if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(
-    secondProfileStorageKey,
-    JSON.stringify(sanitizeProfile(profile)),
-  );
+  writeTemporaryCookie(secondProfileCookieKey, JSON.stringify(sanitizeProfile(profile)));
+  window.sessionStorage.removeItem(secondProfileStorageKey);
   window.dispatchEvent(new Event("second-profile-change"));
 }
 

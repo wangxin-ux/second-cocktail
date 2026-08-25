@@ -1,25 +1,32 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import {
+  readSecondProfileRaw,
   sanitizeProfile,
+  secondProfileCookieKey,
   secondProfileStorageKey,
+  writeTemporaryCookie,
   type SecondProfile,
 } from "./profile";
 
 const profileEvent = "second-profile-change";
 
 function subscribe(callback: () => void) {
+  const interval = window.setInterval(callback, 1000);
   window.addEventListener(profileEvent, callback);
   window.addEventListener("storage", callback);
+  window.addEventListener("focus", callback);
   return () => {
+    window.clearInterval(interval);
     window.removeEventListener(profileEvent, callback);
     window.removeEventListener("storage", callback);
+    window.removeEventListener("focus", callback);
   };
 }
 
 function getSnapshot() {
-  return window.sessionStorage.getItem(secondProfileStorageKey) ?? "";
+  return readSecondProfileRaw();
 }
 
 function getServerSnapshot() {
@@ -38,6 +45,14 @@ export function useSecondProfile(): {
   profile: SecondProfile;
   isHydrated: boolean;
 } {
+  useEffect(() => {
+    if (readSecondProfileRaw()) return;
+    const legacy = window.sessionStorage.getItem(secondProfileStorageKey);
+    if (!legacy) return;
+    writeTemporaryCookie(secondProfileCookieKey, legacy);
+    window.sessionStorage.removeItem(secondProfileStorageKey);
+    window.dispatchEvent(new Event(profileEvent));
+  }, []);
   const rawProfile = useSyncExternalStore(
     subscribe,
     getSnapshot,

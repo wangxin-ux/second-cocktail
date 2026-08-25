@@ -113,6 +113,20 @@ export default function ProfileForm() {
               />
             </label>
 
+            <label className="col-span-2 grid gap-2">
+              <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                {t("meetingLocation")}
+              </span>
+              <input
+                className={inputClass}
+                maxLength={80}
+                placeholder={t("meetingLocationPlaceholder")}
+                value={profile.meetingLocation ?? ""}
+                onChange={(event) => updateProfile("meetingLocation", event.target.value)}
+              />
+              <span className="text-[0.62rem] leading-5 text-white/28">{t("meetingLocationHelp")}</span>
+            </label>
+
             <label className="grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
                 {t("age")}

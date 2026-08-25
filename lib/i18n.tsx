@@ -16,6 +16,7 @@ const translations = {
     profileStep: "Step 01", profileEyebrow: "Your second profile", profileTitle: "Tell us a little. Or nothing at all.",
     profileBody: "Up to six optional signals shape your drink and tonight's match. For this demo, they stay in this browser session.",
     nickname: "Nickname", nicknamePlaceholder: "What should we call you?", age: "Age", height: "Height", zodiac: "Zodiac", energy: "Tonight's energy",
+    meetingLocation: "Where to find you", meetingLocationPlaceholder: "e.g. Bar counter, table 12", meetingLocationHelp: "Optional · shown only to a matched person after you both agree.",
     ageError: "Enter an age from 18 to 99", heightError: "Enter a height from 120 to 230 cm", profileSaved: "{count} of 6 added · all editable", profileSkip: "Skip all fields and continue if you prefer",
     spiritStep: "Step 02", baseSpirit: "Base spirit", chooseSpirit: "Choose your spirit.", spiritBody: "Every night starts with a base.",
     flavorStep: "Step 03", craving: "What are you craving?", flavorBody: "Choose the mood of your drink.", base: "Base", generate: "Generate Cocktail", chooseRecipe: "Choose a Recipe", preparing: "Preparing…",
@@ -25,6 +26,9 @@ const translations = {
     room: "Reading the room", drink: "Your drink", matchLabel: "second / match", matchIntroEyebrow: "Tonight in this bar", matchIntroTitle: "Who should you meet tonight?", matchIntroBody: "We'll combine your optional profile with the mood of {cocktail}. Your answers are used only in this browser demo.",
     matchSignals: "Match signals", fieldsAndDrink: "{count} profile fields + {spirit} × {flavor}", consent: "I agree to use my browser profile for this matching demo. No real person will be contacted.", readRoom: "Read the Room", demoPool: "Demo pool · fictional profiles only", meet: "Tonight, you should meet", whyTonight: "Why tonight", openingLine: "Your opening line", backMatch: "Back to Match Intro", fictional: "Fictional demo result · no contact was made", shared: "You share {reasons}.", different: "Your two drinks bring different energies to the same room.",
     openingBar: "Opening the bar", preparingSecond: "Preparing your second",
+    socialTalkEyebrow: "After your drink", socialTalkTitle: "5-minute social talk", socialTalkBody: "Join the people in the room, just for this moment.",
+    socialTalk: "Social talk", socialTalkIntro: "A five-minute room for small talk. Be kind, be curious.", peopleHere: "people are here now", onePersonHere: "person is here now", timeLeft: "Time left", messagePlaceholder: "Say something to the room…", send: "Send", roomClosed: "This round has ended.", startNewRound: "Start another round", connecting: "Joining the room…", online: "Live room",
+    onlineMatching: "{count} people are matching right now", onlineMatchingOne: "1 person is matching right now",
   },
   zh: {
     back: "返回", continue: "继续", optional: "可选", edit: "修改",
@@ -35,6 +39,7 @@ const translations = {
     profileStep: "第 01 步", profileEyebrow: "你的 second 档案", profileTitle: "告诉我们一点，或什么都不说。",
     profileBody: "最多六项可选信息会影响你的酒与今晚的匹配；演示中仅保留在当前浏览器会话。",
     nickname: "昵称", nicknamePlaceholder: "我们该怎么称呼你？", age: "年龄", height: "身高", zodiac: "星座", energy: "今晚状态",
+    meetingLocation: "见面位置", meetingLocationPlaceholder: "例如：吧台、12 号桌", meetingLocationHelp: "可选 · 仅在双方同意匹配后向对方展示。",
     ageError: "请输入 18 至 99 岁", heightError: "请输入 120 至 230 厘米", profileSaved: "已填写 6 项中的 {count} 项 · 均可修改", profileSkip: "如愿意，可跳过全部信息继续",
     spiritStep: "第 02 步", baseSpirit: "基酒", chooseSpirit: "选择你的基酒。", spiritBody: "每个夜晚，都从一款基酒开始。",
     flavorStep: "第 03 步", craving: "你现在想喝什么？", flavorBody: "选择这杯酒的情绪。", base: "基酒", generate: "生成鸡尾酒", chooseRecipe: "选择配方", preparing: "正在准备…",
@@ -44,6 +49,9 @@ const translations = {
     room: "正在读懂现场", drink: "你的酒", matchLabel: "second / 匹配", matchIntroEyebrow: "今晚，在这间酒吧", matchIntroTitle: "今晚，你该认识谁？", matchIntroBody: "我们会结合你的可选档案与「{cocktail}」的情绪。信息只用于此浏览器演示。",
     matchSignals: "匹配信号", fieldsAndDrink: "{count} 项档案信息 + {spirit} × {flavor}", consent: "我同意使用浏览器中的个人档案进行这次匹配演示；不会联系任何真实人物。", readRoom: "开始匹配", demoPool: "演示池 · 仅虚构档案", meet: "今晚，你应该认识", whyTonight: "为什么是今晚", openingLine: "你的破冰开场", backMatch: "返回匹配介绍", fictional: "虚构演示结果 · 未联系任何真实人物", shared: "你们拥有 {reasons}。", different: "两杯酒为同一个空间带来了不同能量。",
     openingBar: "正在打开酒吧", preparingSecond: "正在准备你的 second",
+    socialTalkEyebrow: "点酒之后", socialTalkTitle: "限时 5 分钟 Social Talk", socialTalkBody: "加入当下在场的人，聊聊这一刻。",
+    socialTalk: "Social Talk", socialTalkIntro: "一个只持续五分钟的轻松聊天室。友善一点，好奇一点。", peopleHere: "人正在参与", onePersonHere: "1 人正在参与", timeLeft: "剩余时间", messagePlaceholder: "和现场说点什么…", send: "发送", roomClosed: "本轮交流已结束。", startNewRound: "开始新一轮", connecting: "正在加入现场…", online: "实时房间",
+    onlineMatching: "当前有 {count} 人正在匹配", onlineMatchingOne: "当前有 1 人正在匹配",
   },
 } as const;
 

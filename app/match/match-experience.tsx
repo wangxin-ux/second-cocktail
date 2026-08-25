@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FlavorId } from "../flavors/flavors";
 import type { SpiritId } from "../spirits/spirits";
 import { findTonightMatch } from "@/lib/second/match";
@@ -11,6 +11,7 @@ import {
 import { useSecondProfile } from "@/lib/second/use-second-profile";
 import LanguageToggle from "../language-toggle";
 import { localizeFlavor, localizeMatchCandidate, localizeMatchReason, localizeSpirit, useI18n } from "@/lib/i18n";
+import { useLiveMatch } from "../live-match-provider";
 
 type MatchExperienceProps = {
   spirit: { id: SpiritId; name: string };
@@ -25,12 +26,34 @@ export default function MatchExperience({
 }: MatchExperienceProps) {
   const { profile, isHydrated: isReady } = useSecondProfile();
   const { language, t } = useI18n();
+  const { setDefaultAvailable } = useLiveMatch();
   const [hasConsented, setHasConsented] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
   const match = useMemo(
     () => findTonightMatch(profile, spirit.id, flavor.id),
     [flavor.id, profile, spirit.id],
   );
+
+  useEffect(() => {
+    setDefaultAvailable(isRevealed);
+    return () => setDefaultAvailable(false);
+  }, [isRevealed, setDefaultAvailable]);
+
+  useEffect(() => {
+    if (!isRevealed) return;
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/presence", { cache: "no-store" });
+        const data = await response.json() as { online?: number };
+        if (!cancelled && typeof data.online === "number") setOnlineCount(data.online);
+      } catch { /* Keep the last visible count if the service is briefly unavailable. */ }
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 5000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [isRevealed]);
 
   if (!isReady) {
     return (
@@ -157,6 +180,23 @@ export default function MatchExperience({
                 “{localizeMatchCandidate(match.candidate.id, match.candidate.opener, language, "opener")}”
               </p>
             </div>
+
+            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-4">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.7)]" />
+              <p className="text-sm text-white/65">{onlineCount === 1 ? t("onlineMatchingOne") : t("onlineMatching", { count: onlineCount })}</p>
+            </div>
+
+            <Link
+              href="/social-talk"
+              className="mt-5 flex min-h-14 w-full items-center justify-between rounded-[1.5rem] border border-white/[0.11] bg-white/[0.035] px-5 text-left transition-colors hover:border-amber-100/[0.32]"
+            >
+              <span>
+                <span className="block text-[0.58rem] font-semibold uppercase tracking-[0.28em] text-amber-100/48">{t("socialTalkEyebrow")}</span>
+                <span className="mt-1.5 block text-sm font-medium text-stone-100">{t("socialTalkTitle")}</span>
+                <span className="mt-1 block text-xs text-white/42">{t("socialTalkBody")}</span>
+              </span>
+              <span aria-hidden="true" className="ml-4 text-xl text-amber-100/60">→</span>
+            </Link>
 
             <button
               type="button"
