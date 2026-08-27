@@ -1,11 +1,14 @@
 import type { FlavorId } from "@/app/flavors/flavors";
 import type { SpiritId } from "@/app/spirits/spirits";
+import type { Mbti, TonightEnergy } from "@/lib/second/profile";
 import { ingredientPools, signatureNames } from "./ingredient-pools";
 import type { CocktailIngredient, CocktailRecipe } from "./types";
 
 export type LocalCreativeInput = {
   spirit: SpiritId;
   flavor: FlavorId;
+  energy?: TonightEnergy;
+  mbti?: Mbti;
   referenceRecipe: CocktailRecipe;
 };
 
@@ -21,23 +24,23 @@ type FlavorChangePlan = {
 };
 
 const baseMatchers: Record<SpiritId, RegExp> = {
-  gin: /\bgin\b/i,
-  vodka: /\bvodka\b/i,
-  rum: /\b(rum|cachaça|cachaca|ron|aguardiente)\b/i,
-  tequila: /\b(tequila|mezcal)\b/i,
-  whisky: /\b(whisky|whiskey|bourbon|rye|scotch)\b/i,
-  brandy: /\b(brandy|cognac|pisco|calvados|armagnac)\b/i,
+  gin: /\bgin\b|金酒/i,
+  vodka: /\bvodka\b|伏特加/i,
+  rum: /\b(rum|cachaça|cachaca|ron|aguardiente)\b|朗姆/i,
+  tequila: /\b(tequila|mezcal)\b|龙舌兰|梅斯卡尔/i,
+  whisky: /\b(whisky|whiskey|bourbon|rye|scotch)\b|威士忌|波本|黑麦/i,
+  brandy: /\b(brandy|cognac|pisco|calvados|armagnac)\b|白兰地|干邑/i,
 };
 
 const ingredientMatchers = {
-  citrus: /lemon|lime|grapefruit|citrus|yuzu/i,
-  sweetener: /syrup|sugar|honey|agave|demerara/i,
-  fruit: /pineapple|passion|orange juice|cranberry|peach|raspberry|berry|fruit|puree/i,
-  liqueur: /liqueur|triple sec|curaçao|curacao|cointreau|maraschino|cr[eè]me/i,
-  bitters: /bitters/i,
-  bitterModifier: /campari|aperol|amaro|vermouth/i,
-  herb: /basil|mint|rosemary|cucumber/i,
-  mixer: /soda|tonic|ginger beer|sparkling/i,
+  citrus: /lemon|lime|grapefruit|citrus|yuzu|柠檬|青柠|葡萄柚|西柚|柚子/i,
+  sweetener: /syrup|sugar|honey|agave|demerara|糖浆|糖|蜂蜜/i,
+  fruit: /pineapple|passion|orange juice|cranberry|peach|raspberry|berry|fruit|puree|菠萝|百香果|橙汁|蔓越莓|桃|覆盆子|莓|果泥|果汁/i,
+  liqueur: /liqueur|triple sec|curaçao|curacao|cointreau|maraschino|cr[eè]me|利口酒|君度|查特/i,
+  bitters: /bitters|苦精/i,
+  bitterModifier: /campari|aperol|amaro|vermouth|金巴利|味美思|苦艾/i,
+  herb: /basil|mint|rosemary|cucumber|罗勒|薄荷|迷迭香|黄瓜/i,
+  mixer: /soda|tonic|ginger beer|sparkling|苏打|汤力|姜汁啤酒|起泡酒|香槟|汽水|可乐/i,
 };
 
 const garnishPools: Record<FlavorId, readonly string[]> = {
@@ -227,6 +230,28 @@ function addHerb(): Change {
   };
 }
 
+function addOrReplaceCuriousHerb(
+  draft: RecipeDraft,
+  random: () => number,
+) {
+  if (addHerb()(draft, random)) return true;
+
+  const herb = pickAvailable(ingredientPools.herbs, draft, random);
+  if (!herb) return false;
+  const replaceableAccent = draft.ingredients.findLastIndex(
+    (ingredient) =>
+      !isBaseIngredient(ingredient.name) &&
+      !ingredientMatchers.mixer.test(ingredient.name) &&
+      ingredient.amountText !== undefined,
+  );
+  if (replaceableAccent < 0) return false;
+  draft.ingredients[replaceableAccent] = {
+    name: herb,
+    amountText: herbMeasures[herb],
+  };
+  return true;
+}
+
 function adjustIngredient(matcher: RegExp): Change {
   return (draft, random) => {
     const candidates = draft.ingredients.filter(
@@ -248,6 +273,145 @@ function adjustIngredient(matcher: RegExp): Change {
     }
     return true;
   };
+}
+
+function addMixer(draft: RecipeDraft, amountMl: number) {
+  if (draft.ingredients.length >= 8) return false;
+  if (draft.ingredients.some((ingredient) => ingredientMatchers.mixer.test(ingredient.name))) {
+    return false;
+  }
+  draft.ingredients.push({ name: "Soda Water", amountMl });
+  return true;
+}
+
+function increaseMixer(draft: RecipeDraft, amountMl: number) {
+  const mixer = draft.ingredients.find(
+    (ingredient) =>
+      ingredientMatchers.mixer.test(ingredient.name) &&
+      ingredient.amountMl !== undefined,
+  );
+  if (!mixer) return false;
+  mixer.amountMl = Math.min(150, roundToFive(mixer.amountMl! + amountMl));
+  return true;
+}
+
+function addNamedAccent(
+  draft: RecipeDraft,
+  ingredient: CocktailIngredient,
+) {
+  if (draft.ingredients.length >= 8 || hasIngredient(draft, ingredient.name)) {
+    return false;
+  }
+  draft.ingredients.push(ingredient);
+  return true;
+}
+
+function adjustNonBaseIngredient(
+  draft: RecipeDraft,
+  deltaMl: number,
+) {
+  const ingredient = draft.ingredients.find(
+    (candidate) =>
+      !isBaseIngredient(candidate.name) &&
+      !ingredientMatchers.mixer.test(candidate.name) &&
+      candidate.amountMl !== undefined &&
+      candidate.amountMl > Math.abs(Math.min(deltaMl, 0)),
+  );
+  if (!ingredient) return false;
+  ingredient.amountMl = Math.max(5, Math.min(150, ingredient.amountMl! + deltaMl));
+  return true;
+}
+
+function softenStructure(draft: RecipeDraft, flavor: FlavorId) {
+  const removableIndex = draft.ingredients.findLastIndex((ingredient) => {
+    if (isBaseIngredient(ingredient.name)) return false;
+    if (flavor === "refreshing" && ingredientMatchers.mixer.test(ingredient.name)) return false;
+    if (flavor === "sour" && ingredientMatchers.citrus.test(ingredient.name)) return false;
+    if (flavor === "bitter" && ingredientMatchers.bitterModifier.test(ingredient.name)) return false;
+    return ingredientMatchers.bitters.test(ingredient.name) ||
+      ingredientMatchers.herb.test(ingredient.name) ||
+      ingredientMatchers.liqueur.test(ingredient.name);
+  });
+
+  if (draft.ingredients.length > 3 && removableIndex >= 0) {
+    draft.ingredients.splice(removableIndex, 1);
+    return true;
+  }
+
+  const sharpIngredient = draft.ingredients.find(
+    (ingredient) =>
+      (ingredientMatchers.citrus.test(ingredient.name) ||
+        ingredientMatchers.bitterModifier.test(ingredient.name)) &&
+      ingredient.amountMl !== undefined &&
+      ingredient.amountMl > 10,
+  );
+  if (sharpIngredient) {
+    sharpIngredient.amountMl = Math.max(5, sharpIngredient.amountMl! - 5);
+    return true;
+  }
+  return adjustNonBaseIngredient(draft, -5);
+}
+
+function applyEnergyBias(
+  draft: RecipeDraft,
+  flavor: FlavorId,
+  energy: TonightEnergy | undefined,
+  random: () => number,
+) {
+  if (!energy) return;
+
+  switch (energy) {
+    case "open":
+      if (increaseMixer(draft, 15)) return;
+      if (flavor !== "bold" && addMixer(draft, 45)) return;
+      if (addNamedAccent(draft, { name: "Orange Bitters", amountText: "1 dash" })) return;
+      adjustNonBaseIngredient(draft, 5);
+      return;
+    case "curious":
+      if (
+        ["sour", "fruity", "refreshing"].includes(flavor) &&
+        addOrReplaceCuriousHerb(draft, random)
+      ) return;
+      addNamedAccent(draft, { name: "Orange Bitters", amountText: "2 dashes" });
+      return;
+    case "slow":
+      softenStructure(draft, flavor);
+      return;
+    case "celebrating":
+      if (flavor !== "bold") {
+        if (increaseMixer(draft, 30)) return;
+        if (addMixer(draft, 75)) return;
+      }
+      if (addNamedAccent(draft, { name: "Angostura Bitters", amountText: "2 dashes" })) return;
+      adjustNonBaseIngredient(draft, 10);
+      return;
+  }
+}
+
+function applyMbtiRefinement(
+  draft: RecipeDraft,
+  flavor: FlavorId,
+  mbti: Mbti | undefined,
+) {
+  if (!mbti) return;
+
+  if (mbti.startsWith("E")) {
+    increaseMixer(draft, 10);
+  } else if (mbti.startsWith("I")) {
+    const mixer = draft.ingredients.find(
+      (ingredient) =>
+        ingredientMatchers.mixer.test(ingredient.name) &&
+        ingredient.amountMl !== undefined &&
+        ingredient.amountMl > 45,
+    );
+    if (mixer) mixer.amountMl = Math.max(45, mixer.amountMl! - 10);
+  }
+
+  if (mbti[1] === "N") {
+    addNamedAccent(draft, { name: "Orange Bitters", amountText: "1 dash" });
+  } else if (mbti[1] === "S" && flavor !== "refreshing") {
+    draft.garnish = garnishPools[flavor][0];
+  }
 }
 
 function flavorChanges(flavor: FlavorId): FlavorChangePlan {
@@ -358,7 +522,7 @@ function buildMethod(recipe: RecipeDraft, flavor: FlavorId) {
     ingredientMatchers.mixer.test(ingredient.name),
   );
   const hasJuice = recipe.ingredients.some((ingredient) =>
-    /juice|puree|cream|egg/i.test(ingredient.name),
+    /juice|puree|cream|egg|果汁|果泥|奶油|蛋白/i.test(ingredient.name),
   );
   const muddleIngredient = recipe.ingredients.find((ingredient) =>
     /wedges|leaves|slices/i.test(ingredient.name),
@@ -383,7 +547,7 @@ function buildMethod(recipe: RecipeDraft, flavor: FlavorId) {
 }
 
 export function createLocalSignatureCocktail(
-  { spirit, flavor, referenceRecipe }: LocalCreativeInput,
+  { spirit, flavor, energy, mbti, referenceRecipe }: LocalCreativeInput,
   options: LocalCreativeOptions = {},
 ): CocktailRecipe {
   const random = options.random ?? Math.random;
@@ -405,8 +569,10 @@ export function createLocalSignatureCocktail(
   }
 
   ensureMinimumStructure(draft, flavor, random);
-  draft.ingredients = uniqueIngredients(draft.ingredients).slice(0, 8);
   draft.garnish = pick(garnishPools[flavor], random);
+  applyEnergyBias(draft, flavor, energy, random);
+  applyMbtiRefinement(draft, flavor, mbti);
+  draft.ingredients = uniqueIngredients(draft.ingredients).slice(0, 8);
 
   const name = generateName(referenceRecipe.name, random);
 

@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getFlavor } from "../flavors/flavors";
 import { getSpirit } from "../spirits/spirits";
 import MatchExperience from "./match-experience";
+import RealtimeMatchExperience from "./realtime-match-experience";
 import { useI18n } from "@/lib/i18n";
+import type { DemoMatchScenario } from "@/lib/second/demo-match-service";
 
 function RoutingState() {
   const { t } = useI18n();
@@ -23,7 +25,8 @@ function MatchPageContent() {
   const searchParams = useSearchParams();
   const spiritId = searchParams.get("spirit") ?? undefined;
   const flavorId = searchParams.get("flavor") ?? undefined;
-  const cocktail = searchParams.get("cocktail") ?? undefined;
+  const demoParam = searchParams.get("demo");
+  const scenario: DemoMatchScenario = demoParam === "empty" || demoParam === "error" ? demoParam : "default";
   const spirit = getSpirit(spiritId);
   const flavor = getFlavor(flavorId);
 
@@ -32,12 +35,13 @@ function MatchPageContent() {
   }, [flavor, router, spirit]);
 
   if (!spirit || !flavor) return <RoutingState />;
+  const mode = process.env.NEXT_PUBLIC_MATCH_MODE === "demo" ? "demo" : "realtime";
 
-  return (
+  return mode === "realtime" ? <RealtimeMatchExperience spirit={spirit} flavor={flavor} /> : (
     <MatchExperience
       spirit={spirit}
       flavor={flavor}
-      cocktail={(cocktail ?? "Your Second Signature").slice(0, 80)}
+      scenario={scenario}
     />
   );
 }

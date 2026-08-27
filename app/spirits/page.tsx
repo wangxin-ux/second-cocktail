@@ -6,6 +6,7 @@ import { useState } from "react";
 import { spirits, type SpiritId } from "./spirits";
 import LanguageToggle from "../language-toggle";
 import { localizeSpirit, localizeSpiritProfile, useI18n } from "@/lib/i18n";
+import TonightSignal from "../tonight-signal";
 
 export default function SpiritSelectionPage() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function SpiritSelectionPage() {
         className="pointer-events-none absolute -right-28 top-24 h-72 w-72 rounded-full bg-amber-100/[0.045] blur-3xl"
       />
 
-      <div className="relative mx-auto flex min-h-[calc(100dvh-2.25rem)] w-full max-w-md flex-col">
+      <div className="second-shell relative flex min-h-[calc(100dvh-2.25rem)] flex-col">
         <header className="flex min-h-10 items-center justify-between">
           <Link
             href="/profile"
@@ -48,20 +49,26 @@ export default function SpiritSelectionPage() {
         </header>
 
         <section className="pb-5 pt-6">
-          <p className="mb-2 text-[0.65rem] font-medium uppercase tracking-[0.26em] text-white/35">
+          <p className="second-micro mb-3 text-amber-100/58">
             {t("baseSpirit")}
           </p>
-          <h1 className="text-[2.35rem] font-medium leading-none tracking-[-0.055em] text-stone-100 sm:text-[2.65rem]">
+          <h1 className="second-screen-title text-stone-100">
             {t("chooseSpirit")}
           </h1>
-          <p className="mt-3 text-sm tracking-[-0.01em] text-white/45">
+          <p className="second-body mt-4">
             {t("spiritBody")}
           </p>
+          <TonightSignal
+            stage="spirit"
+            spirit={selectedSpirit}
+            label={language === "zh" ? "基酒正在改变今晚信号的骨架" : "The spirit is shaping the backbone of tonight's signal"}
+            className="mx-auto -mb-3 mt-1 max-w-[13.5rem]"
+          />
         </section>
 
         <div
           aria-label={t("baseSpirit")}
-          className="grid gap-1.5"
+          className="grid border-t border-white/[0.12]"
           role="radiogroup"
         >
           {spirits.map((spirit, index) => {
@@ -74,10 +81,10 @@ export default function SpiritSelectionPage() {
                 role="radio"
                 aria-checked={isSelected}
                 onClick={() => setSelectedSpirit(spirit.id)}
-                className={`group relative flex min-h-16 w-full items-center overflow-hidden rounded-2xl border px-4 py-3 text-left transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-100/70 active:scale-[0.99] ${
+                className={`second-focus group relative flex min-h-[4.5rem] w-full items-center overflow-hidden border-b border-x-0 border-t-0 px-1 py-3 text-left transition-all duration-200 ease-out ${
                   isSelected
-                    ? "scale-[1.01] border-amber-100/35 bg-gradient-to-r from-amber-100/[0.12] to-white/[0.035] shadow-[0_0_30px_rgba(224,190,142,0.08)]"
-                    : "border-white/[0.07] bg-white/[0.018] hover:border-white/15 hover:bg-white/[0.04]"
+                    ? "border-amber-100/35 bg-gradient-to-r from-amber-100/[0.09] to-transparent"
+                    : "border-white/[0.12] bg-transparent hover:bg-white/[0.035]"
                 }`}
               >
                 <span
@@ -90,7 +97,7 @@ export default function SpiritSelectionPage() {
 
                 <span className="flex min-w-0 flex-1 items-center justify-between gap-4">
                   <span
-                    className={`text-[1.05rem] font-medium tracking-[-0.025em] transition-colors ${
+                    className={`text-[1.1rem] font-medium tracking-[-0.035em] transition-colors ${
                       isSelected ? "text-white" : "text-white/78"
                     }`}
                   >
@@ -121,7 +128,7 @@ export default function SpiritSelectionPage() {
             type="button"
             disabled={!selectedSpirit}
             onClick={continueToNextStep}
-            className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold tracking-[-0.01em] text-neutral-950 transition-all duration-200 enabled:hover:bg-stone-200 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.055] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="second-primary"
           >
             {t("continue")}
           </button>

@@ -7,6 +7,7 @@ import type { Spirit } from "../spirits/spirits";
 import { flavors, type FlavorId } from "./flavors";
 import LanguageToggle from "../language-toggle";
 import { localizeFlavor, localizeFlavorDescription, localizeSpirit, useI18n } from "@/lib/i18n";
+import TonightSignal from "../tonight-signal";
 
 type FlavorSelectionProps = {
   spirit: Pick<Spirit, "id" | "name">;
@@ -31,7 +32,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
         className="pointer-events-none absolute -left-32 top-40 h-80 w-80 rounded-full bg-indigo-200/[0.035] blur-3xl"
       />
 
-      <div className="relative mx-auto flex min-h-[calc(100dvh-2.25rem)] w-full max-w-md flex-col">
+      <div className="second-shell relative flex min-h-[calc(100dvh-2.25rem)] flex-col">
         <header className="flex min-h-10 items-center justify-between">
           <Link
             href="/spirits"
@@ -55,10 +56,10 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
         </header>
 
         <section className="pb-5 pt-6">
-          <h1 className="max-w-xs text-[2.35rem] font-medium leading-[0.98] tracking-[-0.055em] text-stone-100 sm:text-[2.65rem]">
+          <h1 className="second-screen-title max-w-xs text-stone-100">
             {t("craving")}
           </h1>
-          <p className="mt-3 text-sm tracking-[-0.01em] text-white/45">
+          <p className="second-body mt-4">
             {t("flavorBody")}
           </p>
 
@@ -71,11 +72,18 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
               {localizeSpirit(spirit.id, spirit.name, language)}
             </span>
           </div>
+          <TonightSignal
+            stage="flavor"
+            spirit={spirit.id}
+            flavor={selectedFlavor}
+            label={language === "zh" ? "风味正在改变今晚信号的感官方向" : "Flavor is changing the sensory direction of tonight's signal"}
+            className="mx-auto -mb-4 mt-1 max-w-[13rem]"
+          />
         </section>
 
         <div
           aria-label={t("craving")}
-          className="grid grid-cols-2 gap-2"
+          className="grid grid-cols-2 gap-x-5 border-t border-white/[0.12]"
           role="radiogroup"
         >
           {flavors.map((flavor, index) => {
@@ -88,27 +96,18 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
                 role="radio"
                 aria-checked={isSelected}
                 onClick={() => setSelectedFlavor(flavor.id)}
-                className={`group relative min-h-[7.65rem] overflow-hidden rounded-[1.25rem] border p-4 text-left transition-all duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-100/70 active:scale-[0.98] ${
+                className={`second-focus group relative min-h-[6.7rem] overflow-hidden border-b border-x-0 border-t-0 px-1 py-4 text-left transition-all duration-200 ease-out active:scale-[0.99] ${
                   isSelected
-                    ? "scale-[1.015] border-white/35 bg-white/[0.075] shadow-[0_0_34px_rgba(200,180,150,0.08)]"
-                    : "border-white/[0.075] bg-white/[0.018] hover:border-white/15 hover:bg-white/[0.04]"
+                    ? "border-amber-100/55 bg-transparent"
+                    : "border-white/[0.12] bg-transparent hover:border-white/25"
                 }`}
               >
                 <span
                   aria-hidden="true"
-                  className={`absolute -right-8 -top-10 h-32 w-32 rounded-full blur-2xl transition-all duration-300 ${
-                    isSelected ? "scale-125 opacity-100" : "opacity-55"
-                  }`}
-                  style={{
-                    background: `radial-gradient(circle, ${flavor.glow} 0%, transparent 70%)`,
-                  }}
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-3 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                  className={`absolute bottom-0 left-0 h-px bg-amber-100 transition-[width] duration-300 ${isSelected ? "w-full" : "w-0"}`}
                 />
 
-                <span className="relative flex h-full min-h-[5.65rem] flex-col justify-between">
+                <span className="relative flex h-full min-h-[4.7rem] flex-col justify-between">
                   <span className="flex items-start justify-between">
                     <span
                       className={`text-[0.55rem] font-semibold tabular-nums tracking-[0.18em] transition-colors ${
@@ -154,7 +153,7 @@ export default function FlavorSelection({ spirit }: FlavorSelectionProps) {
             type="button"
             disabled={!selectedFlavor || isNavigating}
             onClick={generateCocktail}
-            className="min-h-14 w-full rounded-full border border-white/15 bg-white px-6 text-sm font-semibold tracking-[-0.01em] text-neutral-950 transition-all duration-200 enabled:hover:bg-stone-200 enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:border-white/[0.06] disabled:bg-white/[0.055] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="second-primary"
           >
           {isNavigating ? t("preparing") : t("generate")}
           </button>

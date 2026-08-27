@@ -6,12 +6,12 @@ export type RecipeValidationResult =
   | { valid: false; errors: string[] };
 
 const baseIngredientMatchers: Record<SpiritId, RegExp> = {
-  gin: /\bgin\b/i,
-  vodka: /\bvodka\b/i,
-  rum: /\b(rum|cachaça|cachaca|ron|aguardiente)\b/i,
-  tequila: /\b(tequila|mezcal)\b/i,
-  whisky: /\b(whisky|whiskey|bourbon|rye|scotch)\b/i,
-  brandy: /\b(brandy|cognac|pisco|calvados|armagnac)\b/i,
+  gin: /\bgin\b|金酒/i,
+  vodka: /\bvodka\b|伏特加/i,
+  rum: /\b(rum|cachaça|cachaca|ron|aguardiente)\b|朗姆/i,
+  tequila: /\b(tequila|mezcal)\b|龙舌兰|梅斯卡尔/i,
+  whisky: /\b(whisky|whiskey|bourbon|rye|scotch)\b|威士忌|波本|黑麦/i,
+  brandy: /\b(brandy|cognac|pisco|calvados|armagnac)\b|白兰地|干邑/i,
 };
 
 export function validateCocktailRecipe(

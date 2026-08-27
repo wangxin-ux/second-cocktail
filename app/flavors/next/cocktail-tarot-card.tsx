@@ -3,8 +3,10 @@ import type { FlavorId } from "../flavors";
 import type { SpiritId } from "../../spirits/spirits";
 import type { SecondProfile } from "@/lib/second/profile";
 import type { Language } from "@/lib/i18n";
+import TonightSignal, { getTonightSignalNumber } from "../../tonight-signal";
 
 type CocktailTarotCardProps = {
+  cocktailId: string;
   cocktailName: string;
   spirit: SpiritId;
   flavor: FlavorId;
@@ -12,22 +14,31 @@ type CocktailTarotCardProps = {
   language: Language;
 };
 
-type CardTheme = {
-  ink: string;
-  glow: string;
-  accent: string;
-  constellation: string;
-  title: { en: string; zh: string };
-  quality: { en: string; zh: string };
+const spiritOrder: SpiritId[] = [
+  "gin",
+  "vodka",
+  "rum",
+  "tequila",
+  "whisky",
+  "brandy",
+];
+
+const spiritSymbols: Record<SpiritId, string> = {
+  gin: "✦",
+  vodka: "◈",
+  rum: "☾",
+  tequila: "☀",
+  whisky: "♜",
+  brandy: "✺",
 };
 
-const themes: Record<FlavorId, CardTheme> = {
-  sour: { ink: "#d6d982", glow: "rgba(214,217,130,0.32)", accent: "#f4e7aa", constellation: "✦", title: { en: "THE CITRUS ORACLE", zh: "柑橘神谕" }, quality: { en: "lucid instinct", zh: "清醒直觉" } },
-  sweet: { ink: "#df9c9b", glow: "rgba(223,156,155,0.33)", accent: "#ffd8cf", constellation: "❋", title: { en: "THE VELVET HOUR", zh: "丝绒时刻" }, quality: { en: "soft magnetism", zh: "柔软吸引力" } },
-  bitter: { ink: "#ca9866", glow: "rgba(202,152,102,0.31)", accent: "#efc38b", constellation: "✢", title: { en: "THE DARK GARDEN", zh: "暗夜花园" }, quality: { en: "quiet complexity", zh: "沉静复杂度" } },
-  fruity: { ink: "#d484a2", glow: "rgba(212,132,162,0.32)", accent: "#ffc0d2", constellation: "✽", title: { en: "THE WILD BLOOM", zh: "野性盛放" }, quality: { en: "playful gravity", zh: "灵动引力" } },
-  refreshing: { ink: "#82c9bd", glow: "rgba(130,201,189,0.31)", accent: "#c2f0e7", constellation: "✧", title: { en: "THE CLEAR SIGNAL", zh: "清澈讯号" }, quality: { en: "open current", zh: "开放流动感" } },
-  bold: { ink: "#c88165", glow: "rgba(200,129,101,0.34)", accent: "#f1b897", constellation: "✹", title: { en: "THE LAST FLAME", zh: "最后一簇火" }, quality: { en: "unmistakable presence", zh: "鲜明存在感" } },
+const flavorSymbols: Record<FlavorId, string> = {
+  sour: "◇",
+  sweet: "●",
+  bitter: "✢",
+  fruity: "❋",
+  refreshing: "≋",
+  bold: "✹",
 };
 
 const zodiacSymbols: Record<string, string> = {
@@ -35,72 +46,99 @@ const zodiacSymbols: Record<string, string> = {
   Libra: "♎", Scorpio: "♏", Sagittarius: "♐", Capricorn: "♑", Aquarius: "♒", Pisces: "♓",
 };
 
-const spiritSymbols: Record<SpiritId, string> = {
-  gin: "✦", vodka: "◈", rum: "☾", tequila: "☀", whisky: "♜", brandy: "✺",
+const flavorCopy: Record<FlavorId, { en: string; zh: string; hue: number }> = {
+  sour: { en: "bright tension", zh: "明亮张力", hue: 68 },
+  sweet: { en: "velvet balance", zh: "丝绒平衡", hue: 348 },
+  bitter: { en: "layered depth", zh: "层叠深度", hue: 28 },
+  fruity: { en: "vivid bloom", zh: "鲜活盛放", hue: 326 },
+  refreshing: { en: "clear current", zh: "清澈流动", hue: 169 },
+  bold: { en: "lasting fire", zh: "余韵之火", hue: 16 },
 };
 
-function hash(value: string) {
-  let result = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    result ^= value.charCodeAt(index);
-    result = Math.imul(result, 16777619);
-  }
-  return result >>> 0;
-}
-
-function cardNumber(value: number) {
-  return String((value % 78) + 1).padStart(2, "0");
-}
-
 export default function CocktailTarotCard({
+  cocktailId,
   cocktailName,
   spirit,
   flavor,
   profile,
   language,
 }: CocktailTarotCardProps) {
-  const theme = themes[flavor];
-  const identity = [cocktailName, spirit, flavor, profile.zodiac, profile.mbti, profile.energy, profile.age].join("|");
-  const number = hash(identity);
-  const symbol = zodiacSymbols[profile.zodiac ?? ""] ?? spiritSymbols[spirit];
-  const secondarySymbol = spiritSymbols[spirit];
-  const personalMark = profile.mbti ?? (language === "zh" ? "今夜" : "TONIGHT");
-  const name = profile.nickname || (language === "zh" ? "未知旅人" : "UNKNOWN GUEST");
+  const cardNumber = getTonightSignalNumber(cocktailId, spirit, flavor);
+  const designIndex = cardNumber - 1;
+  const layout = designIndex % 6;
+  const pattern = Math.floor(designIndex / 6) % 6;
+  const frame = Math.floor(designIndex / 36);
+  const spiritIndex = spiritOrder.indexOf(spirit);
+  const zodiacOffset = profile.zodiac
+    ? Object.keys(zodiacSymbols).indexOf(profile.zodiac) % 5
+    : 0;
+  const hue =
+    (flavorCopy[flavor].hue + spiritIndex * 7 + (designIndex % 3) * 4 + zodiacOffset * 2) %
+    360;
+  const guest =
+    profile.nickname || (language === "zh" ? "今夜来宾" : "TONIGHT'S GUEST");
   const style = {
-    "--card-ink": theme.ink,
-    "--card-glow": theme.glow,
-    "--card-accent": theme.accent,
+    "--card-ink": `hsl(${hue} 68% 72%)`,
+    "--card-accent": `hsl(${(hue + 34) % 360} 76% 78%)`,
+    "--card-glow": `hsla(${hue} 78% 62% / 0.3)`,
+    "--card-surface": `hsl(${hue} 18% 7%)`,
+    "--card-rotation": `${((designIndex % 7) - 3) * 0.35}deg`,
   } as CSSProperties;
 
   return (
-    <article aria-label={language === "zh" ? "为你抽出的鸡尾酒塔罗牌" : "Your personal cocktail tarot card"} className="tarot-card" style={style}>
-      <div className="tarot-card__grain" />
-      <div className="tarot-card__border tarot-card__border--outer" />
-      <div className="tarot-card__border tarot-card__border--inner" />
-      <div className="tarot-card__corner tarot-card__corner--one">{cardNumber(number)}</div>
-      <div className="tarot-card__corner tarot-card__corner--two">SECOND</div>
+    <article
+      aria-label={
+        language === "zh"
+          ? `${cocktailName} 专属卡片，第 ${cardNumber} 张，共 108 张`
+          : `${cocktailName} card, ${cardNumber} of 108`
+      }
+      className="tarot-card"
+      data-frame={frame}
+      data-layout={layout}
+      data-pattern={pattern}
+      style={style}
+    >
+      <div className="tarot-card__field" aria-hidden="true" />
+      <div className="tarot-card__grain" aria-hidden="true" />
+      <div
+        className="tarot-card__border tarot-card__border--outer"
+        aria-hidden="true"
+      />
+      <div
+        className="tarot-card__border tarot-card__border--inner"
+        aria-hidden="true"
+      />
 
       <div className="tarot-card__topline">
-        <span>{theme.constellation} {personalMark}</span>
-        <span>{theme.constellation} {cardNumber(number)}</span>
+        <span>SECOND / SIGNATURE</span>
+        <span>{profile.zodiac ? `${zodiacSymbols[profile.zodiac]} ` : ""}{String(cardNumber).padStart(3, "0")} / 108</span>
       </div>
 
-      <div className="tarot-card__orb" aria-hidden="true">
-        <span className="tarot-card__orbit tarot-card__orbit--one" />
-        <span className="tarot-card__orbit tarot-card__orbit--two" />
-        <span className="tarot-card__symbol">{symbol}</span>
-        <span className="tarot-card__spirit">{secondarySymbol}</span>
-      </div>
+      <TonightSignal
+        stage="reveal"
+        spirit={spirit}
+        flavor={flavor}
+        cocktailNumber={cardNumber}
+        compact
+        label={language === "zh" ? `完整的今晚信号，第 ${cardNumber} 张，共 108 张` : `Complete tonight signal, ${cardNumber} of 108`}
+        className="tarot-card__signal"
+      />
 
       <div className="tarot-card__identity">
-        <p>{language === "zh" ? "今夜的饮酒人格" : "TONIGHT'S DRINKING SIGN"}</p>
-        <h2>{theme.title[language]}</h2>
-        <span>{name} · {theme.quality[language]}</span>
+        <p>{language === "zh" ? "属于今晚的你" : "SHAPED FOR TONIGHT"}</p>
+        <h2>{cocktailName}</h2>
+        <span>
+          {guest} · {flavorCopy[flavor][language]}
+        </span>
       </div>
 
       <div className="tarot-card__footer">
-        <span>{language === "zh" ? "第二张牌 · 仅存于此刻" : "SECOND CARD · HELD IN THIS MOMENT"}</span>
-        <span>{theme.constellation}</span>
+        <span>
+          {spirit.toUpperCase()} · {flavor.toUpperCase()}
+        </span>
+        <span>
+          {spiritSymbols[spirit]} {flavorSymbols[flavor]}
+        </span>
       </div>
     </article>
   );
