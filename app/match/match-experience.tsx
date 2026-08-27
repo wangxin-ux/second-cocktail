@@ -1,17 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
 import type { FlavorId } from "../flavors/flavors";
 import type { SpiritId } from "../spirits/spirits";
-import { findTonightMatch } from "@/lib/second/match";
-import {
-  completedProfileFields,
-} from "@/lib/second/profile";
+import { completedProfileFields } from "@/lib/second/profile";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
 import LanguageToggle from "../language-toggle";
-import { localizeFlavor, localizeMatchCandidate, localizeMatchReason, localizeSpirit, useI18n } from "@/lib/i18n";
-import { useLiveMatch } from "../live-match-provider";
+import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 
 type MatchExperienceProps = {
   spirit: { id: SpiritId; name: string };
@@ -19,198 +14,43 @@ type MatchExperienceProps = {
   cocktail: string;
 };
 
-export default function MatchExperience({
-  spirit,
-  flavor,
-  cocktail,
-}: MatchExperienceProps) {
-  const { profile, isHydrated: isReady } = useSecondProfile();
+export default function MatchExperience({ spirit, flavor, cocktail }: MatchExperienceProps) {
+  const { profile, isHydrated } = useSecondProfile();
   const { language, t } = useI18n();
-  const { setDefaultAvailable } = useLiveMatch();
-  const [hasConsented, setHasConsented] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
-  const [onlineCount, setOnlineCount] = useState(0);
-  const match = useMemo(
-    () => findTonightMatch(profile, spirit.id, flavor.id),
-    [flavor.id, profile, spirit.id],
-  );
+  const eligible = Boolean(profile.nickname && profile.age && profile.heightCm && profile.meetingLocation);
 
-  useEffect(() => {
-    setDefaultAvailable(isRevealed);
-    return () => setDefaultAvailable(false);
-  }, [isRevealed, setDefaultAvailable]);
-
-  useEffect(() => {
-    if (!isRevealed) return;
-    let cancelled = false;
-    const refresh = async () => {
-      try {
-        const response = await fetch("/api/presence", { cache: "no-store" });
-        const data = await response.json() as { online?: number };
-        if (!cancelled && typeof data.online === "number") setOnlineCount(data.online);
-      } catch { /* Keep the last visible count if the service is briefly unavailable. */ }
-    };
-    refresh();
-    const interval = window.setInterval(refresh, 5000);
-    return () => { cancelled = true; window.clearInterval(interval); };
-  }, [isRevealed]);
-
-  if (!isReady) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center bg-[#070707] px-6">
-        <p className="mixing-copy text-[0.62rem] font-semibold uppercase tracking-[0.34em] text-white/45">
-          {t("room")}
-        </p>
-      </main>
-    );
+  if (!isHydrated) {
+    return <main className="flex min-h-dvh items-center justify-center bg-[#070707] px-6"><p className="text-[0.62rem] font-semibold uppercase tracking-[0.34em] text-white/45">{t("room")}</p></main>;
   }
 
-  return (
-    <main className="relative min-h-dvh overflow-x-hidden bg-[#080808] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(176,139,101,0.11),transparent_68%)] blur-2xl"
-      />
-      <div className="relative mx-auto w-full max-w-md">
-        <header className="flex min-h-11 items-center justify-between">
-          <Link
-            href={`/flavors/next?spirit=${spirit.id}&flavor=${flavor.id}`}
-            className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/42 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-          >
-            <span aria-hidden="true">←</span>
-            {t("drink")}
-          </Link>
-          <div className="flex items-center gap-3">
-            <LanguageToggle />
-            <span className="text-[0.58rem] font-semibold uppercase tracking-[0.32em] text-amber-100/50">
-              {t("matchLabel")}
-            </span>
+  return <main className="relative min-h-dvh overflow-hidden bg-[#080808] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-stone-100 sm:px-6">
+    <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-0 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(190,154,112,0.12),transparent_68%)] blur-3xl" />
+    <div className="relative mx-auto w-full max-w-md">
+      <header className="flex min-h-11 items-center justify-between">
+        <Link href={`/flavors/next?spirit=${spirit.id}&flavor=${flavor.id}`} className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/42"><span aria-hidden="true">←</span>{t("drink")}</Link>
+        <div className="flex items-center gap-3"><LanguageToggle /><span className="text-[0.58rem] font-semibold uppercase tracking-[0.32em] text-amber-100/50">{t("matchLabel")}</span></div>
+      </header>
+
+      <section className="flex min-h-[calc(100svh-5rem)] flex-col justify-center pb-8 pt-8">
+        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-amber-100/50">{t("matchIntroEyebrow")}</p>
+        <h1 className="mt-4 text-[3.15rem] font-medium leading-[0.9] tracking-[-0.075em]">{t("matchIntroTitle")}</h1>
+        <p className="mt-5 max-w-sm text-sm leading-6 text-white/48">{language === "zh" ? `我们会用你的档案与「${cocktail}」的情绪，为你寻找今晚此刻也在现场的人。` : `We’ll use your profile and the mood of “${cocktail}” to find someone who is here tonight.`}</p>
+
+        <div className="mt-9 rounded-[1.65rem] border border-white/[0.09] bg-white/[0.025] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[0.56rem] font-semibold uppercase tracking-[0.27em] text-white/30">{t("matchSignals")}</p>
+              <p className="mt-2 text-sm leading-6 text-white/68">{t("fieldsAndDrink", { count: completedProfileFields(profile), spirit: localizeSpirit(spirit.id, spirit.name, language), flavor: localizeFlavor(flavor.id, flavor.name, language) })}</p>
+            </div>
+            <Link href="/profile" className="shrink-0 text-xs font-semibold text-amber-100/60 underline decoration-white/15 underline-offset-4">{t("edit")}</Link>
           </div>
-        </header>
+          <div className="mt-5 border-t border-white/[0.08] pt-5">
+            <p className="text-xs leading-5 text-white/38">{language === "zh" ? "匹配成功后会先展示双方的昵称、年龄和身高；你同意后才会开始五分钟并显示见面位置。" : "A match first reveals names, ages and heights. The five minutes and meeting location begin only after acceptance."}</p>
+          </div>
+        </div>
 
-        {!isRevealed ? (
-          <section className="flex min-h-[calc(100svh-5rem)] flex-col justify-center pb-8 pt-8">
-            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-white/28">
-              {t("matchIntroEyebrow")}
-            </p>
-            <h1 className="mt-4 text-[2.65rem] font-medium leading-[0.94] tracking-[-0.065em] text-stone-100">
-              {t("matchIntroTitle")}
-            </h1>
-            <p className="mt-5 max-w-sm text-sm leading-6 text-white/42">
-              {t("matchIntroBody", { cocktail })}
-            </p>
-
-            <div className="mt-8 rounded-[1.5rem] border border-white/[0.08] bg-white/[0.025] p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-[0.56rem] font-semibold uppercase tracking-[0.27em] text-white/28">
-                    {t("matchSignals")}
-                  </p>
-                  <p className="mt-2 text-sm text-white/65">
-                    {t("fieldsAndDrink", { count: completedProfileFields(profile), spirit: localizeSpirit(spirit.id, spirit.name, language), flavor: localizeFlavor(flavor.id, flavor.name, language) })}
-                  </p>
-                </div>
-                <Link
-                  href="/profile"
-                  className="shrink-0 text-xs font-semibold text-amber-100/55 underline decoration-white/15 underline-offset-4"
-                >
-                  {t("edit")}
-                </Link>
-              </div>
-            </div>
-
-            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.07] p-4">
-              <input
-                checked={hasConsented}
-                className="mt-0.5 h-4 w-4 accent-[#eadfce]"
-                type="checkbox"
-                onChange={(event) => setHasConsented(event.target.checked)}
-              />
-              <span className="text-xs leading-5 text-white/42">
-                {t("consent")}
-              </span>
-            </label>
-
-            <button
-              type="button"
-              disabled={!hasConsented}
-              onClick={() => setIsRevealed(true)}
-              className="mt-5 min-h-14 w-full rounded-full bg-stone-100 px-6 text-sm font-semibold text-neutral-950 transition-all enabled:hover:bg-white enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-            >
-              {t("readRoom")}
-            </button>
-
-            <p className="mt-4 text-center text-[0.57rem] uppercase tracking-[0.19em] text-white/20">
-              {t("demoPool")}
-            </p>
-          </section>
-        ) : (
-          <section className="match-reveal flex min-h-[calc(100svh-5rem)] flex-col justify-center pb-8 pt-10">
-            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.34em] text-amber-100/48">
-              {t("meet")}
-            </p>
-            <h1 className="mt-5 text-[4.6rem] font-medium uppercase leading-[0.82] tracking-[-0.075em] text-stone-100">
-              {match.candidate.nickname}
-            </h1>
-            <p className="mt-6 text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-white/36">
-              {match.candidate.mbti} × {match.candidate.zodiac} × {match.candidate.drink}
-            </p>
-
-            <div className="mt-9 border-y border-white/[0.08] py-6">
-              <p className="text-base leading-7 tracking-[-0.02em] text-white/72">
-                {localizeMatchCandidate(match.candidate.id, match.candidate.oneLine, language, "oneLine")}
-              </p>
-              <div className="mt-6">
-                <p className="text-[0.56rem] font-semibold uppercase tracking-[0.28em] text-white/28">
-                  {t("whyTonight")}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-white/48">
-                  {match.reasons.length > 0
-                    ? t("shared", { reasons: match.reasons.map((reason) => localizeMatchReason(reason, language)).join(language === "zh" ? "、" : " and ") })
-                    : t("different")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-7 rounded-[1.5rem] border border-amber-100/[0.12] bg-amber-100/[0.035] p-5">
-              <p className="text-[0.56rem] font-semibold uppercase tracking-[0.28em] text-amber-100/42">
-                {t("openingLine")}
-              </p>
-              <p className="mt-3 text-base leading-6 text-stone-100/80">
-                “{localizeMatchCandidate(match.candidate.id, match.candidate.opener, language, "opener")}”
-              </p>
-            </div>
-
-            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-5 py-4">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_14px_rgba(74,222,128,0.7)]" />
-              <p className="text-sm text-white/65">{onlineCount === 1 ? t("onlineMatchingOne") : t("onlineMatching", { count: onlineCount })}</p>
-            </div>
-
-            <Link
-              href="/social-talk"
-              className="mt-5 flex min-h-14 w-full items-center justify-between rounded-[1.5rem] border border-white/[0.11] bg-white/[0.035] px-5 text-left transition-colors hover:border-amber-100/[0.32]"
-            >
-              <span>
-                <span className="block text-[0.58rem] font-semibold uppercase tracking-[0.28em] text-amber-100/48">{t("socialTalkEyebrow")}</span>
-                <span className="mt-1.5 block text-sm font-medium text-stone-100">{t("socialTalkTitle")}</span>
-                <span className="mt-1 block text-xs text-white/42">{t("socialTalkBody")}</span>
-              </span>
-              <span aria-hidden="true" className="ml-4 text-xl text-amber-100/60">→</span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setIsRevealed(false)}
-              className="mt-7 min-h-13 w-full rounded-full border border-white/[0.1] px-6 text-sm font-semibold text-white/55 transition-colors hover:border-white/25 hover:text-white/85"
-            >
-              {t("backMatch")}
-            </button>
-            <p className="mt-4 text-center text-[0.57rem] uppercase tracking-[0.18em] text-white/18">
-              {t("fictional")}
-            </p>
-          </section>
-        )}
-      </div>
-    </main>
-  );
+        {eligible ? <Link href="/social-talk" className="mt-6 flex min-h-14 w-full items-center justify-center rounded-full bg-stone-100 px-6 text-sm font-semibold text-neutral-950 transition-all hover:bg-white active:scale-[0.99]">{t("readRoom")}</Link> : <Link href="/profile" className="mt-6 flex min-h-14 w-full items-center justify-center rounded-full bg-stone-100 px-6 text-sm font-semibold text-neutral-950">{language === "zh" ? "补全见面信息" : "Complete meeting details"}</Link>}
+      </section>
+    </div>
+  </main>;
 }

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import type { CocktailRecipe } from "@/lib/cocktails/types";
 import { useI18n } from "@/lib/i18n";
 
@@ -42,8 +45,23 @@ export default function BartenderRecipe({
   onMakeAnother,
   matchHref,
 }: BartenderRecipeProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const steps = methodSteps(recipe.method);
+  const [onlineCount, setOnlineCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const response = await fetch("/api/presence", { cache: "no-store" });
+        const data = await response.json() as { online?: number };
+        if (!cancelled && typeof data.online === "number") setOnlineCount(data.online);
+      } catch { /* Keep the last count while the live service reconnects. */ }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 5000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
 
   return (
     <section
@@ -135,6 +153,10 @@ export default function BartenderRecipe({
           <p className="mt-2 text-xs leading-5 text-white/38">
             {t("matchBody")}
           </p>
+          <div className="mt-4 flex items-center gap-2 border-t border-amber-100/[0.1] pt-4">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.65)]" />
+            <span className="text-xs text-white/48">{language === "zh" ? `当前 ${onlineCount} 人在线` : `${onlineCount} people online now`}</span>
+          </div>
           <Link
             href={matchHref}
             className="mt-5 flex min-h-13 w-full items-center justify-center rounded-full bg-amber-50 px-5 text-sm font-semibold text-neutral-950 transition-all hover:bg-white active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
