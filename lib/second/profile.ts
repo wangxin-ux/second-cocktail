@@ -46,7 +46,6 @@ export type TonightEnergy = (typeof energyOptions)[number]["id"];
 export type SecondProfile = {
   nickname?: string;
   age?: number;
-  heightCm?: number;
   zodiac?: Zodiac;
   mbti?: Mbti;
   energy?: TonightEnergy;
@@ -75,9 +74,6 @@ export function sanitizeProfile(value: unknown): SecondProfile {
     ...(nickname ? { nickname } : {}),
     ...(optionalNumber(profile.age, 18, 99) !== undefined
       ? { age: optionalNumber(profile.age, 18, 99) }
-      : {}),
-    ...(optionalNumber(profile.heightCm, 120, 230) !== undefined
-      ? { heightCm: optionalNumber(profile.heightCm, 120, 230) }
       : {}),
     ...(zodiac ? { zodiac } : {}),
     ...(mbti ? { mbti } : {}),
@@ -116,18 +112,18 @@ function fnv1a(value: string) {
 
 export function profileSignature(profile: SecondProfile) {
   const ageBand = profile.age ? Math.floor(profile.age / 5) * 5 : "x";
-  const heightBand = profile.heightCm
-    ? Math.floor(profile.heightCm / 5) * 5
-    : "x";
   const signal = [
     ageBand,
-    heightBand,
     profile.zodiac ?? "x",
     profile.mbti ?? "x",
     profile.energy ?? "x",
   ].join("|");
 
   return fnv1a(signal);
+}
+
+export function cocktailProfileSignature(profile: SecondProfile) {
+  return fnv1a([profile.energy ?? "x", profile.mbti ?? "x"].join("|"));
 }
 
 const zodiacElements: Record<Zodiac, string> = {

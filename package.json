@@ -2,27 +2,41 @@
   "name": "second-cocktail",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "dev": "WATCHPACK_POLLING=true next dev",
+    "dev:realtime": "tsx --env-file=.env.local server/realtime/index.ts",
+    "start:realtime": "NODE_ENV=production tsx --env-file=.env.production server/realtime/index.ts",
+    "db:migrate": "NODE_ENV=production tsx --env-file=.env.production server/db/migrate.ts",
+    "db:migrate:dev": "tsx --env-file=.env.local server/db/migrate.ts",
     "build": "next build",
+    "build:pages": "node scripts/build-pages.mjs",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:realtime": "tsx --env-file=.env.local --test server/**/*.test.ts"
   },
   "dependencies": {
     "next": "16.3.1",
     "openai": "^7.4.0",
+    "pg": "^8.23.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.3.1",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "6.0.3"
   }
 }

@@ -1,5 +1,6 @@
 import type { FlavorId } from "@/app/flavors/flavors";
 import type { SpiritId } from "@/app/spirits/spirits";
+import type { Mbti, TonightEnergy } from "@/lib/second/profile";
 import { createSignatureCocktail } from "./ai";
 import { selectClassicCocktail } from "./engine";
 import { createLocalSignatureCocktail } from "./local-creative";
@@ -12,6 +13,8 @@ import { validateCocktailRecipe } from "./validator";
 type HybridGeneratorInput = {
   spirit: SpiritId;
   flavor: FlavorId;
+  energy?: TonightEnergy;
+  mbti?: Mbti;
   signatureSeed?: string;
   variation?: string;
 };
@@ -22,6 +25,8 @@ type HybridGeneratorOptions = {
   localGenerator?: (input: {
     spirit: SpiritId;
     flavor: FlavorId;
+    energy?: TonightEnergy;
+    mbti?: Mbti;
     referenceRecipe: CocktailRecipe;
   }, options?: { random?: () => number }) => CocktailRecipe;
   creativeGenerator?: (input: {
@@ -57,7 +62,8 @@ function classicResponse(
 
   return {
     recipe: fallbackRecipe,
-    generationMode: "classic",
+    generationMode: "fixed",
+    personalization: {},
     referenceCocktail: {
       id: referenceRecipe.id,
       name: referenceRecipe.name,
@@ -87,6 +93,8 @@ export async function generateHybridCocktail(
         {
           spirit: input.spirit,
           flavor: input.flavor,
+          energy: input.energy,
+          mbti: input.mbti,
           referenceRecipe,
         },
         { random },
@@ -98,6 +106,10 @@ export async function generateHybridCocktail(
       return {
         recipe: localRecipe,
         generationMode: "local",
+        personalization: {
+          ...(input.energy ? { energy: input.energy, energyEffect: ({ open: "brighter", curious: "exploratory", slow: "softer", celebrating: "celebratory" } as const)[input.energy] } : {}),
+          ...(input.mbti ? { mbti: input.mbti, mbtiEffect: input.mbti.startsWith("E") ? "expressive" : input.mbti.startsWith("I") ? "restrained" : input.mbti[1] === "N" ? "exploratory" : "classic" } : {}),
+        },
         referenceCocktail: {
           id: referenceRecipe.id,
           name: referenceRecipe.name,
@@ -125,6 +137,7 @@ export async function generateHybridCocktail(
     return {
       recipe: aiRecipe,
       generationMode: "ai",
+      personalization: {},
       referenceCocktail: {
         id: referenceRecipe.id,
         name: referenceRecipe.name,

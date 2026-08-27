@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import LanguageProvider from "./language-provider";
+import TonightAgeGuard from "./tonight-age-guard";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -9,13 +10,27 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "second — a drink, then a connection",
-  description: "A personal cocktail and the person you should meet tonight.",
+  metadataBase: new URL("https://xinxinyuntu.top"),
+  title: { default: "second — a drink, then a connection", template: "%s — second" },
+  description: "A drink shaped around your night — and, only if you choose, a reason to meet someone.",
+  applicationName: "second",
+  icons: { icon: [{ url: "/second-mark.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/second-mark.svg" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "second",
+    title: "second — a drink, then a connection",
+    description: "A personal cocktail. An optional introduction. One night at a time.",
+  },
+  twitter: { card: "summary", title: "second — a drink, then a connection", description: "A personal cocktail. An optional introduction." },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#090909",
+  themeColor: "#050505",
   colorScheme: "dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -25,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased`}><LanguageProvider>{children}</LanguageProvider></body>
+      <body className={`${manrope.variable} antialiased`}><LanguageProvider><TonightAgeGuard>{children}</TonightAgeGuard></LanguageProvider></body>
     </html>
   );
 }

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import type { CocktailRecipe } from "@/lib/cocktails/types";
 import { useI18n } from "@/lib/i18n";
 
@@ -42,19 +45,20 @@ export default function BartenderRecipe({
   onMakeAnother,
   matchHref,
 }: BartenderRecipeProps) {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const steps = methodSteps(recipe.method);
+  const [isKept, setIsKept] = useState(false);
 
   return (
     <section
       id="bartender-recipe"
-      className="relative border-t border-white/[0.07] bg-[#0a0a0a] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-16 sm:px-8 sm:pt-20"
+      className="relative border-t border-white/[0.12] bg-[#090806] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-16 sm:px-8 sm:pt-20"
     >
       <div className="mx-auto w-full max-w-xl">
-        <p className="text-[0.58rem] font-semibold uppercase tracking-[0.34em] text-amber-100/45">
+        <p className="second-micro text-white/42">
           {t("bartender")}
         </p>
-        <h2 className="mt-4 text-[2rem] font-medium leading-none tracking-[-0.05em] text-stone-100 sm:text-[2.45rem]">
+        <h2 className="second-subtitle mt-4 text-stone-100">
           {recipe.name}
         </h2>
 
@@ -125,22 +129,32 @@ export default function BartenderRecipe({
           </div>
         </dl>
 
-        <section className="mt-12 rounded-[1.5rem] border border-amber-100/[0.12] bg-amber-100/[0.035] p-5">
-          <p className="text-[0.57rem] font-semibold uppercase tracking-[0.3em] text-amber-100/45">
-            {t("matchEyebrow")}
-          </p>
-          <h3 className="mt-3 text-xl font-medium tracking-[-0.04em] text-stone-100">
-            {t("matchTitle")}
+        <section className="relative mt-16 border-y border-amber-100/[0.2] py-9 pl-6 before:absolute before:bottom-9 before:left-0 before:top-9 before:w-px before:bg-amber-100/60">
+          <p className="second-micro text-amber-100/58">SECOND ACT</p>
+          <h3 className="second-subtitle mt-4 max-w-[15ch] text-stone-100">
+            {language === "zh" ? "这杯酒之后，想认识今晚的一个人吗？" : "After this drink, would you like to meet one person tonight?"}
           </h3>
-          <p className="mt-2 text-xs leading-5 text-white/38">
-            {t("matchBody")}
+          <p className="second-body mt-4">
+            {language === "zh" ? "如果你愿意，Second 会在今晚也选择加入的人中，为你寻找一个可能值得聊五分钟的人。" : "If you choose to, Second will look among people here tonight who also chose to meet someone."}
           </p>
           <Link
             href={matchHref}
-            className="mt-5 flex min-h-13 w-full items-center justify-center rounded-full bg-amber-50 px-5 text-sm font-semibold text-neutral-950 transition-all hover:bg-white active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="second-primary mt-7"
           >
-            {t("findMatch")}
+            {language === "zh" ? "认识一个人" : "Meet someone"}
           </Link>
+          <button
+            type="button"
+            onClick={() => setIsKept(true)}
+            className="mt-3 min-h-12 w-full text-xs font-semibold text-white/58 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+          >
+            {language === "zh" ? "今晚只喝这杯" : "Keep tonight to myself"}
+          </button>
+          {isKept ? (
+            <p className="mt-2 text-center text-xs leading-5 text-amber-100/65" role="status">
+              {language === "zh" ? "这杯酒今晚只属于你；没有开始任何匹配。" : "This drink is yours for tonight. No matching has started."}
+            </p>
+          ) : null}
         </section>
 
         <div className="mt-8 space-y-3">
@@ -148,13 +162,13 @@ export default function BartenderRecipe({
             type="button"
             disabled={isGenerating}
             onClick={onMakeAnother}
-            className="min-h-14 w-full rounded-full bg-stone-100 px-6 text-sm font-semibold text-neutral-950 transition-all duration-200 enabled:hover:bg-white enabled:active:scale-[0.99] disabled:cursor-wait disabled:bg-white/15 disabled:text-white/35 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="second-secondary"
           >
             {isGenerating ? t("mixingShort") : t("makeAnother")}
           </button>
           <Link
             href="/"
-            className="flex min-h-14 w-full items-center justify-center rounded-full border border-white/[0.11] px-6 text-sm font-semibold text-white/55 transition-colors hover:border-white/25 hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            className="second-secondary"
           >
             {t("startOver")}
           </Link>

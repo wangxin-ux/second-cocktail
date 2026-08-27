@@ -1,22 +1,47 @@
 import type { FlavorId } from "@/app/flavors/flavors";
 import type { SpiritId } from "@/app/spirits/spirits";
-import { getMenuVariants } from "./fixed-menu";
+import type { Mbti, TonightEnergy } from "@/lib/second/profile";
+import { selectClassicCocktail } from "./engine";
+import { createLocalSignatureCocktail } from "./local-creative";
 import type {
   CocktailGenerationResponse,
   CocktailRecipe,
 } from "./types";
+import { validateCocktailRecipe } from "./validator";
 
 type BrowserGeneratorInput = {
   spirit: SpiritId;
   flavor: FlavorId;
+  energy?: TonightEnergy;
+  mbti?: Mbti;
+  signatureSeed: string;
+  variation: number;
 };
-function fixedResponse(referenceRecipe: CocktailRecipe): CocktailGenerationResponse {
+
+function seededRandom(seed: string) {
+  let state = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    state ^= seed.charCodeAt(index);
+    state = Math.imul(state, 16777619);
+  }
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function classicResponse(referenceRecipe: CocktailRecipe): CocktailGenerationResponse {
   return {
     recipe: {
       ...referenceRecipe,
       glass: referenceRecipe.glass?.trim() || "Cocktail glass",
     },
     generationMode: "fixed",
+    personalization: {},
     referenceCocktail: {
       id: referenceRecipe.id,
       name: referenceRecipe.name,
@@ -27,12 +52,57 @@ function fixedResponse(referenceRecipe: CocktailRecipe): CocktailGenerationRespo
 export function generateBrowserCocktail(
   input: BrowserGeneratorInput,
 ): CocktailGenerationResponse {
-  const variants = getMenuVariants(input.spirit, input.flavor);
-  const referenceRecipe = variants[Math.floor(Math.random() * variants.length)];
+  const random = seededRandom(
+    `${input.signatureSeed}:${input.variation}:${input.spirit}:${input.flavor}`,
+  );
+  const referenceRecipe = selectClassicCocktail(input, random);
 
-  if (!referenceRecipe) {
-    throw new Error(`Missing fixed menu path: ${input.spirit}/${input.flavor}`);
+  try {
+    const recipe = createLocalSignatureCocktail(
+      {
+        spirit: input.spirit,
+        flavor: input.flavor,
+        energy: input.energy,
+        mbti: input.mbti,
+        referenceRecipe,
+      },
+      { random },
+    );
+    const validation = validateCocktailRecipe(recipe, input.spirit);
+    if (!validation.valid) return classicResponse(referenceRecipe);
+
+    return {
+      recipe,
+      generationMode: "local",
+      personalization: {
+        ...(input.energy
+          ? {
+              energy: input.energy,
+              energyEffect: (
+                {
+                  open: "brighter",
+                  curious: "exploratory",
+                  slow: "softer",
+                  celebrating: "celebratory",
+                } as const
+              )[input.energy],
+            }
+          : {}),
+        ...(input.mbti
+          ? {
+              mbti: input.mbti,
+              mbtiEffect: input.mbti.startsWith("E")
+                ? "expressive"
+                : "restrained",
+            }
+          : {}),
+      },
+      referenceCocktail: {
+        id: referenceRecipe.id,
+        name: referenceRecipe.name,
+      },
+    };
+  } catch {
+    return classicResponse(referenceRecipe);
   }
-
-  return fixedResponse(referenceRecipe);
 }
