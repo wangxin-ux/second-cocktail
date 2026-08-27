@@ -20,13 +20,19 @@ yarn-error.log*
 
 # local env files
 .env*
+!.env.example
 
 # local QA artifacts
 /artifacts/
 
-# generated QR codes
+# generated QR codes from local matching checks
 /second-cocktail*.png
 /social-talk-browser-test-qr.png
+
+# local reference material; not part of the deployable application
+/鸡尾酒书籍/
+/108_cocktail_menu_liqueur.docx
+/The Lost Cocktail Codex, Speakeater.pdf
 
 # vercel
 .vercel
