@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -7,11 +7,10 @@ import { WebSocket, WebSocketServer } from "ws";
 const port = Number(process.env.PORT ?? 3000);
 const publicDir = join(process.cwd(), "out");
 const roundMs = 5 * 60 * 1000;
-const passiveFallbackMs = 90 * 1000;
+const ibaCocktailDatabase = JSON.parse(readFileSync(join(process.cwd(), "data/cocktails/iba-cocktails-web.json"), "utf8"));
 const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".ico": "image/x-icon", ".woff2": "font/woff2" };
 
 let activeQueue = [];
-let passiveQueue = [];
 const pairs = new Map();
 const waitingSinceByClient = new Map();
 
@@ -47,8 +46,6 @@ function publicPerson(person) { return { name: person.name, age: person.age, hei
 function cleanClientId(value) { return typeof value === "string" ? value.trim().slice(0, 80) : ""; }
 function removeFromQueues(socket) {
   activeQueue = activeQueue.filter((item) => item !== socket);
-  passiveQueue = passiveQueue.filter((item) => item !== socket);
-  if (socket.fallbackTimer) { clearTimeout(socket.fallbackTimer); socket.fallbackTimer = undefined; }
 }
 function eligible(queue, socket) {
   const now = Date.now();
@@ -59,28 +56,6 @@ function takeOldest(queue, socket) {
   if (candidate) removeFromQueues(candidate);
   return candidate;
 }
-function takeRandomPassive(socket) {
-  const candidates = eligible(passiveQueue, socket);
-  const candidate = candidates[Math.floor(Math.random() * candidates.length)];
-  if (candidate) removeFromQueues(candidate);
-  return candidate;
-}
-function takeOldestMatureActive(socket) {
-  const now = Date.now();
-  const candidate = eligible(activeQueue, socket).find((item) => now - item.queuedAt >= passiveFallbackMs);
-  if (candidate) removeFromQueues(candidate);
-  return candidate;
-}
-function schedulePassiveFallback(socket) {
-  const delay = Math.max(0, socket.queuedAt + passiveFallbackMs - Date.now());
-  socket.fallbackTimer = setTimeout(() => {
-    socket.fallbackTimer = undefined;
-    if (socket.mode !== "active" || socket.pairId || !activeQueue.includes(socket) || socket.readyState !== WebSocket.OPEN) return;
-    const passive = takeRandomPassive(socket);
-    if (passive) createApproach(socket, passive);
-  }, delay);
-  socket.fallbackTimer.unref();
-}
 function queueOnly(socket) {
   removeFromQueues(socket);
   socket.pairId = undefined;
@@ -90,12 +65,7 @@ function queueOnly(socket) {
     waitingSinceByClient.set(socket.clientId, socket.queuedAt);
     activeQueue.push(socket);
     activeQueue.sort((a, b) => a.queuedAt - b.queuedAt);
-    schedulePassiveFallback(socket);
-    send(socket, { type: "waiting", queuedAt: socket.queuedAt, expandsAt: socket.queuedAt + passiveFallbackMs });
-  } else if (socket.mode === "passive") {
-    waitingSinceByClient.delete(socket.clientId);
-    passiveQueue.push(socket);
-    send(socket, { type: "online" });
+    send(socket, { type: "waiting", queuedAt: socket.queuedAt });
   } else {
     waitingSinceByClient.delete(socket.clientId);
     send(socket, { type: "inactive" });
@@ -112,7 +82,7 @@ function createApproach(approacher, target) {
   removeFromQueues(approacher); removeFromQueues(target);
   waitingSinceByClient.delete(approacher.clientId); waitingSinceByClient.delete(target.clientId);
   const pairId = randomUUID();
-  const activePair = { id: pairId, approacher, target, accepted: new Set([approacher]), started: false, finished: false, endsAt: 0 };
+  const activePair = { id: pairId, approacher, target, accepted: new Set(), started: false, finished: false, endsAt: 0 };
   approacher.pairId = pairId; target.pairId = pairId;
   pairs.set(pairId, activePair);
   send(approacher, { type: "matched", role: "approacher", partner: publicPerson(target.person) });
@@ -140,34 +110,31 @@ function restorePairSocket(socket, activePair) {
   if (activePair.finished || (activePair.started && Date.now() >= activePair.endsAt)) {
     activePair.finished = true;
     send(socket, { type: "talk_ended" });
-    if (activePair.surveys?.has(socket)) send(socket, { type: "survey_saved" });
-    const otherSurvey = activePair.surveys?.get(other);
-    if (otherSurvey) send(socket, { type: "drink_gift", drink: otherSurvey.drink, from: other.person.name });
+    const ownSurvey = activePair.surveys?.get(socket);
+    if (ownSurvey) {
+      send(socket, { type: "survey_saved" });
+      send(socket, { type: "impression_drink", drink: ownSurvey.drink });
+    }
   } else if (activePair.started) {
     send(socket, { type: "talk_started", endsAt: activePair.endsAt, meetingLocation: activePair.meetingLocation, role: isApproacher ? "approacher" : "target", partner: publicPerson(other.person) });
   } else if (isApproacher) {
     send(socket, { type: "matched", role: "approacher", partner: publicPerson(other.person) });
+    if (activePair.accepted.has(socket)) send(socket, { type: "accept_recorded" });
+    if (activePair.accepted.has(other)) send(socket, { type: "partner_accepted" });
     armApproachTimeout(activePair);
   } else {
     send(socket, { type: "approach_request", role: "target", partner: publicPerson(other.person) });
+    if (activePair.accepted.has(socket)) send(socket, { type: "accept_recorded" });
+    if (activePair.accepted.has(other)) send(socket, { type: "partner_accepted" });
     armApproachTimeout(activePair);
   }
 }
 function enqueue(socket) {
   removeFromQueues(socket);
   if (socket.mode === "inactive") { queueOnly(socket); return; }
-  if (socket.mode === "passive") {
-    const approacher = takeOldestMatureActive(socket);
-    if (approacher) createApproach(approacher, socket); else queueOnly(socket);
-    return;
-  }
   socket.queuedAt = socket.queuedAt || Date.now();
   const olderActive = takeOldest(activeQueue, socket);
   if (olderActive) { createApproach(olderActive, socket); return; }
-  if (Date.now() - socket.queuedAt >= passiveFallbackMs) {
-    const passive = takeRandomPassive(socket);
-    if (passive) { createApproach(socket, passive); return; }
-  }
   queueOnly(socket);
 }
 function finish(activePair) {
@@ -177,42 +144,58 @@ function finish(activePair) {
   send(activePair.target, { type: "talk_ended" });
 }
 function otherMember(activePair, socket) { return activePair.approacher === socket ? activePair.target : activePair.approacher; }
-const impressionDrinks = {
+const cultureCards = {
   warm: [
-    { id: "honey-amber", nameZh: "蜂蜜琥珀", nameEn: "Honey Amber", baseZh: "波本 · 蜂蜜 · 柠檬", baseEn: "Bourbon · honey · lemon", noteZh: "温暖、柔和，尾调留一点明亮。", noteEn: "Warm and soft, with a bright finish." },
-    { id: "golden-hour", nameZh: "黄金时刻", nameEn: "Golden Hour", baseZh: "朗姆 · 杏桃 · 苏打", baseEn: "Rum · apricot · soda", noteZh: "像刚认识却不陌生的一次碰杯。", noteEn: "A toast that already feels familiar." },
+    { name: "Irish Coffee", nameZh: "爱尔兰咖啡", baseZh: "爱尔兰威士忌 · 热咖啡 · 鲜奶油 · 糖", cultureZh: "诞生于 1940 年代爱尔兰福因斯机场。调酒师 Joe Sheridan 用威士忌与热咖啡温暖远道而来的旅客。", cultureEn: "Created at Ireland's Foynes Airport in the 1940s, where Joe Sheridan warmed delayed travelers with whiskey and hot coffee.", whyZh: "温暖并不喧闹，而是一种让人愿意停留的照顾。", whyEn: "Warmth without noise—the kind of care that makes someone stay." },
+    { name: "Clover Club", nameZh: "三叶草俱乐部", baseZh: "金酒 · 覆盆子 · 柠檬 · 蛋白", cultureZh: "得名于费城的 Clover Club，是禁酒令前美国俱乐部文化留下的粉色经典。", cultureEn: "Named for Philadelphia's Clover Club, this pink classic carries the polish of pre-Prohibition club culture.", whyZh: "柔和的第一眼之下，藏着完整而细腻的层次。", whyEn: "A soft first impression with a composed, detailed center." },
   ],
   mysterious: [
-    { id: "midnight-negroni", nameZh: "午夜内格罗尼", nameEn: "Midnight Negroni", baseZh: "金酒 · 苦味酒 · 黑莓", baseEn: "Gin · bitter aperitivo · blackberry", noteZh: "第一口克制，之后才慢慢显出层次。", noteEn: "Reserved at first, layered after a moment." },
-    { id: "velvet-shadow", nameZh: "天鹅绒暗影", nameEn: "Velvet Shadow", baseZh: "威士忌 · 咖啡 · 可可", baseEn: "Whisky · coffee · cacao", noteZh: "深色、安静，还有一点未说完。", noteEn: "Dark, quiet, and intentionally unfinished." },
+    { name: "Negroni", nameZh: "内格罗尼", baseZh: "金酒 · 金巴利 · 甜味美思", cultureZh: "相传 1919 年诞生于佛罗伦萨，Camillo Negroni 伯爵把 Americano 里的苏打换成了金酒。", cultureEn: "Tradition places its birth in 1919 Florence, when Count Camillo Negroni replaced soda in an Americano with gin.", whyZh: "苦、甜与草本彼此牵制，像一段不会一次说完的人格。", whyEn: "Bitter, sweet, and botanical—someone who does not reveal everything at once." },
+    { name: "Sazerac", nameZh: "萨泽拉克", baseZh: "干邑 · 苦艾酒 · 方糖 · Peychaud 苦精", cultureZh: "新奥尔良最具代表性的古典鸡尾酒之一，苦艾酒杯壁与 Peychaud 苦精构成它独特的仪式。", cultureEn: "A defining New Orleans classic, built around the ritual of an absinthe-rinsed glass and Peychaud's bitters.", whyZh: "有距离感，也有清晰的城市记忆和仪式感。", whyEn: "Distant at first, but full of ritual and a sharply remembered place." },
   ],
   bright: [
-    { id: "citrus-signal", nameZh: "柑橘信号", nameEn: "Citrus Signal", baseZh: "伏特加 · 西柚 · 青柠", baseEn: "Vodka · grapefruit · lime", noteZh: "清爽直接，像一句让人笑出来的话。", noteEn: "Crisp and direct, like a line that makes you smile." },
-    { id: "daylight-spritz", nameZh: "日光气泡", nameEn: "Daylight Spritz", baseZh: "起泡酒 · 橙花 · 白桃", baseEn: "Sparkling wine · orange blossom · peach", noteZh: "轻盈、明快，适合把聊天继续下去。", noteEn: "Light and vivid, made to keep a conversation going." },
+    { name: "French 75", nameZh: "法国 75", baseZh: "金酒 · 柠檬 · 糖浆 · 香槟", cultureZh: "名字来自第一次世界大战时期的法国 75 毫米野战炮，用气泡与柑橘表达干脆利落的冲击。", cultureEn: "Named after the French 75 mm field gun, its champagne and citrus deliver a famously crisp impact.", whyZh: "明亮、直接，出现时会让整个场面醒过来。", whyEn: "Bright and immediate—the kind of presence that wakes up the room." },
+    { name: "Paloma", nameZh: "帕洛玛", baseZh: "龙舌兰 · 青柠 · 盐 · 西柚汽水", cultureZh: "这杯墨西哥高球的确切起源仍有争议，但龙舌兰与西柚早已成为当地酒吧文化的经典组合。", cultureEn: "Its exact origin is debated, but tequila and grapefruit have made it a lasting icon of Mexican highball culture.", whyZh: "清爽、坦率，同时保留一点盐分带来的锋利。", whyEn: "Fresh and candid, with a saline edge that keeps it vivid." },
   ],
   calm: [
-    { id: "quiet-garden", nameZh: "安静花园", nameEn: "Quiet Garden", baseZh: "金酒 · 黄瓜 · 接骨木花", baseEn: "Gin · cucumber · elderflower", noteZh: "不抢话，却让人愿意多停留一会儿。", noteEn: "Never loud, but easy to stay with." },
-    { id: "slow-tide", nameZh: "慢潮", nameEn: "Slow Tide", baseZh: "清酒 · 梨 · 茉莉", baseEn: "Sake · pear · jasmine", noteZh: "清淡而有余韵，适合慢慢认识。", noteEn: "Delicate, lingering, and made for taking time." },
+    { name: "Dry Martini", nameZh: "干马天尼", baseZh: "金酒 · 干味美思", cultureZh: "由 19 世纪末的 Martinez 等配方逐渐演变而来，以极少的材料成为克制与精确的象征。", cultureEn: "Evolving from late-19th-century drinks such as the Martinez, it became an icon of restraint and precision.", whyZh: "不需要很多语言，边界清楚，本身就足够完整。", whyEn: "Few words, clear edges, and complete without excess." },
+    { name: "Mojito", nameZh: "莫吉托", baseZh: "古巴白朗姆 · 青柠 · 薄荷 · 糖 · 苏打", cultureZh: "源自古巴的长饮传统，薄荷、青柠与朗姆把炎热的夜晚变得轻松而漫长。", cultureEn: "Rooted in Cuban long-drink tradition, mint, lime, and rum turn a hot night into something easy and unhurried.", whyZh: "平静不是沉默，而是让周围的人自然放松。", whyEn: "Calm is not silence; it is the ability to let everyone around you relax." },
   ],
   bold: [
-    { id: "fireline-paloma", nameZh: "火线帕洛玛", nameEn: "Fireline Paloma", baseZh: "龙舌兰 · 西柚 · 辣椒", baseEn: "Tequila · grapefruit · chilli", noteZh: "有冲劲，也不打算隐藏自己的方向。", noteEn: "Forward, vivid, and sure of its direction." },
-    { id: "red-letter", nameZh: "红色来信", nameEn: "Red Letter", baseZh: "梅斯卡尔 · 石榴 · 海盐", baseEn: "Mezcal · pomegranate · sea salt", noteZh: "带一点烟熏，留下很清楚的记忆。", noteEn: "A trace of smoke and a very clear memory." },
+    { name: "Old Fashioned", nameZh: "古典鸡尾酒", baseZh: "波本或黑麦威士忌 · 方糖 · 苦精", cultureZh: "它保留了 19 世纪最早的鸡尾酒公式：烈酒、糖、水与苦精，也因此得到“老式喝法”的名字。", cultureEn: "It preserves the 19th-century cocktail formula—spirit, sugar, water, and bitters—and took its name from ordering the old-fashioned way.", whyZh: "方向明确，不用装饰掩盖自己的力量。", whyEn: "Direct in purpose, with no decoration hiding its strength." },
+    { name: "Boulevardier", nameZh: "花花公子", baseZh: "波本或黑麦威士忌 · 金巴利 · 甜味美思", cultureZh: "1920 年代由旅居巴黎的作家 Erskine Gwynne 推广，像一杯穿着晚礼服的威士忌。", cultureEn: "Popularized in 1920s Paris by writer Erskine Gwynne, it drinks like whiskey dressed for the evening.", whyZh: "大胆但有分寸，知道什么时候应该向前一步。", whyEn: "Bold with control—someone who knows when to step forward." },
   ],
   playful: [
-    { id: "spark-collins", nameZh: "火花柯林斯", nameEn: "Spark Collins", baseZh: "金酒 · 柠檬 · 跳跳糖", baseEn: "Gin · lemon · popping candy", noteZh: "好奇、轻松，下一秒可能又有新话题。", noteEn: "Curious, easy, and ready for another tangent." },
-    { id: "plot-twist", nameZh: "剧情反转", nameEn: "Plot Twist", baseZh: "朗姆 · 菠萝 · 罗勒", baseEn: "Rum · pineapple · basil", noteZh: "入口熟悉，转身却给你一个意外。", noteEn: "Familiar at first, surprising one beat later." },
+    { name: "Mai-Tai", nameZh: "迈泰", baseZh: "牙买加朗姆 · 马提尼克朗姆 · 橙味利口酒 · 杏仁糖浆 · 青柠", cultureZh: "Trader Vic 于 1944 年在奥克兰创作；名字据说来自塔希提语 maita'i，意为“非常好”。", cultureEn: "Created by Trader Vic in Oakland in 1944; its name is linked to the Tahitian maita'i, meaning 'very good.'", whyZh: "熟悉里总有意外，下一句话永远猜不到方向。", whyEn: "Familiar enough to welcome you, surprising enough to change direction." },
+    { name: "Espresso Martini", nameZh: "浓缩咖啡马天尼", baseZh: "伏特加 · 咖啡利口酒 · 糖浆 · 浓缩咖啡", cultureZh: "1980 年代由伦敦调酒师 Dick Bradsell 创作，把夜生活需要的清醒与兴奋装进同一只杯子。", cultureEn: "Created in 1980s London by Dick Bradsell, combining the alertness and energy of nightlife in one glass.", whyZh: "反应快、有趣，而且总能让气氛再亮一格。", whyEn: "Quick, playful, and able to lift the room another notch." },
   ],
 };
 function safeSurvey(value) {
   const input = value && typeof value === "object" ? value : {};
-  const impression = Object.hasOwn(impressionDrinks, input.impression) ? input.impression : "bright";
+  const impression = Object.hasOwn(cultureCards, input.impression) ? input.impression : "bright";
   const vibe = ["easy", "deep", "playful"].includes(input.vibe) ? input.vibe : "easy";
   const again = ["yes", "maybe", "no"].includes(input.again) ? input.again : "maybe";
   return { impression, vibe, again };
 }
 function generateDrink(survey) {
-  const choices = impressionDrinks[survey.impression];
-  return choices[Math.floor(Math.random() * choices.length)];
+  const choices = cultureCards[survey.impression];
+  const card = choices[Math.floor(Math.random() * choices.length)];
+  const recipe = ibaCocktailDatabase.find((item) => item.name === card.name);
+  if (!recipe) throw new Error(`IBA cocktail not found: ${card.name}`);
+  return {
+    id: recipe.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    nameZh: card.nameZh,
+    nameEn: recipe.name,
+    baseZh: card.baseZh,
+    baseEn: recipe.ingredients.map((item) => item.ingredient).join(" · "),
+    noteZh: card.whyZh,
+    noteEn: card.whyEn,
+    cultureZh: card.cultureZh,
+    cultureEn: card.cultureEn,
+    category: recipe.category,
+    methodEn: recipe.method,
+    garnishEn: recipe.garnish ?? "",
+  };
 }
 function returnAfterDecline(activePair, reason = "declined") {
   clearTimeout(activePair.approachTimer);
@@ -222,7 +205,9 @@ function returnAfterDecline(activePair, reason = "declined") {
   activePair.target.cooldownClientId = activePair.approacher.clientId;
   activePair.approacher.cooldownUntil = Date.now() + 30_000;
   activePair.target.cooldownUntil = Date.now() + 30_000;
-  send(activePair.approacher, { type: reason === "timeout" ? "approach_timeout" : "approach_declined" });
+  const resultType = reason === "timeout" ? "approach_timeout" : "approach_declined";
+  send(activePair.approacher, { type: resultType });
+  send(activePair.target, { type: resultType });
   enqueue(activePair.approacher);
   enqueue(activePair.target);
 }
@@ -235,7 +220,7 @@ wss.on("connection", (socket) => {
         if (data.protocolVersion !== 2) { send(socket, { type: "update_required" }); socket.close(4004, "update required"); return; }
         socket.person = safePerson(data.person);
         socket.clientId = cleanClientId(data.clientId) || randomUUID();
-        socket.mode = data.mode === "active" ? "active" : data.mode === "passive" ? "passive" : "inactive";
+        socket.mode = data.mode === "active" ? "active" : "inactive";
         socket.queuedAt = socket.mode === "active" ? waitingSinceByClient.get(socket.clientId) ?? Date.now() : Date.now();
         if (!socket.person.name || socket.person.name === "Someone" || !socket.person.age || !socket.person.heightCm || !socket.person.location) {
           send(socket, { type: "profile_incomplete" }); return;
@@ -252,7 +237,7 @@ wss.on("connection", (socket) => {
       }
       const activePair = socket.pairId ? pairs.get(socket.pairId) : undefined;
       if (data.type === "set_mode") {
-        const nextMode = data.mode === "active" ? "active" : data.mode === "passive" ? "passive" : "inactive";
+        const nextMode = data.mode === "active" ? "active" : "inactive";
         if (activePair) { socket.nextMode = nextMode; return; }
         if (socket.mode !== nextMode) {
           socket.mode = nextMode;
@@ -262,9 +247,10 @@ wss.on("connection", (socket) => {
         return;
       }
       if (!activePair) return;
-      if (data.type === "accept" && socket === activePair.target && !activePair.started) {
+      if (data.type === "accept" && !activePair.started && (socket === activePair.approacher || socket === activePair.target)) {
         activePair.accepted.add(socket);
         const other = otherMember(activePair, socket);
+        send(socket, { type: "accept_recorded" });
         send(other, { type: "partner_accepted" });
         if (activePair.accepted.size === 2) {
           clearTimeout(activePair.approachTimer);
@@ -288,7 +274,7 @@ wss.on("connection", (socket) => {
           const drink = generateDrink(survey);
           activePair.surveys.set(socket, { survey, drink });
           send(socket, { type: "survey_saved" });
-          send(otherMember(activePair, socket), { type: "drink_gift", drink, from: socket.person.name });
+          send(socket, { type: "impression_drink", drink });
         }
         return;
       }

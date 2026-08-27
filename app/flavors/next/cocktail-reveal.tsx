@@ -84,6 +84,9 @@ export default function CocktailReveal({
             <span>{language === "zh" ? "为你抽出" : "DRAWN FOR YOU"}</span>
             <span aria-hidden="true">✦</span>
           </div>
+          <h2 className="max-w-[12ch] text-balance text-center text-[clamp(1.9rem,8vw,3rem)] font-medium uppercase leading-[0.92] tracking-[-0.055em] text-stone-100">
+            {cocktailName}
+          </h2>
           <div className="reveal-item reveal-tarot flex justify-center" style={{ width: "min(100%, 18.5rem)" }}>
             <CocktailTarotCard
               cocktailName={cocktailName}
@@ -105,9 +108,9 @@ export default function CocktailReveal({
 
       <a
         href="#bartender-recipe"
-        className="reveal-scroll-cue absolute bottom-[max(1.35rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex min-h-11 -translate-x-1/2 flex-col items-center justify-center gap-1 text-[0.5rem] font-semibold uppercase tracking-[0.28em] text-white/25 transition-colors hover:text-white/55 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+        className="reveal-scroll-cue absolute bottom-[max(1.35rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex min-h-11 w-[min(90vw,28rem)] -translate-x-1/2 flex-col items-center justify-center gap-1 text-center text-[0.5rem] font-semibold uppercase tracking-[0.2em] text-white/32 transition-colors hover:text-white/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
       >
-        {t("recipe")}
+        {t("scrollRecipe")}
         <span aria-hidden="true" className="text-sm font-light">
           ↓
         </span>
