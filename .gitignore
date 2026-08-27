@@ -17,6 +17,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+/logs/
 
 # local env files
 .env*
@@ -24,6 +26,25 @@ yarn-error.log*
 
 # local QA artifacts
 /artifacts/
+
+# local browser, profile, and cookie test data
+/browser-data/
+/browser-profiles/
+/cookies/
+/playwright/.auth/
+/test-profile-data/
+/*.cookies.json
+
+# local PostgreSQL data and database dumps
+/database-data/
+/postgres-data/
+/pgdata/
+*.dump
+*.sql.dump
+
+# generated QR codes from local matching checks
+/second-cocktail*.png
+/social-talk-browser-test-qr.png
 
 # local reference material; not part of the deployable application
 /鸡尾酒书籍/
