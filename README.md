@@ -2,6 +2,12 @@
 
 Production deployment guide for the Second realtime matching app.
 
+## Demo
+
+[Open the GitHub Pages demo](https://knighty-hub-hit.github.io/second-cocktail/)
+
+This is a static product demo for trying the experience in a browser. It does not include PostgreSQL, Socket.IO, or real multi-user matching; use the deployment guide below for the production realtime service.
+
 ## Architecture
 
 `Browser → HTTPS reverse proxy → Next.js (127.0.0.1:3000) + Socket.IO realtime service (127.0.0.1:3002) → PostgreSQL`
