@@ -20,9 +20,15 @@ yarn-error.log*
 
 # local env files
 .env*
+!.env.example
 
 # local QA artifacts
 /artifacts/
+
+# local reference material; not part of the deployable application
+/鸡尾酒书籍/
+/108_cocktail_menu_liqueur.docx
+/The Lost Cocktail Codex, Speakeater.pdf
 
 # vercel
 .vercel
