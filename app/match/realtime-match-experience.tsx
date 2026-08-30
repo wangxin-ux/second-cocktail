@@ -25,7 +25,7 @@ function Timer({ seconds }: { seconds: number }) {
 export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { id: SpiritId; name: string }; flavor: { id: FlavorId; name: string } }) {
   const { profile, isHydrated } = useSecondProfile();
   const { language } = useI18n(); const zh = language === "zh";
-  const [consented, setConsented] = useState(false); const [error, setError] = useState(""); const [secondsLeft, setSecondsLeft] = useState(300); const [queueSeconds, setQueueSeconds] = useState(0);
+  const [consented, setConsented] = useState(false); const [error, setError] = useState(""); const [restoring, setRestoring] = useState(true); const [secondsLeft, setSecondsLeft] = useState(300); const [queueSeconds, setQueueSeconds] = useState(0);
   const [state, setState] = useState<CanonicalMatchState>({ stage: "idle", serverNow: new Date().toISOString() });
   const service = useMemo(() => new RealtimeMatchService(), []); const cocktail = isHydrated ? readTonightCocktailSession() : null;
   const href = `/flavors/next?${new URLSearchParams({ spirit: spirit.id, flavor: flavor.id }).toString()}`;
@@ -33,16 +33,26 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
   const energy = candidate ? energyOptions.find((item) => item.id === candidate.energy) : null;
   const num = cocktail ? getTonightSignalNumber(cocktail.result.recipe.id, spirit.id, flavor.id) : undefined;
   useEffect(() => {
+    const controller = new AbortController();
     const off = service.subscribe(setState);
     const offError = service.subscribeError(() => setError(language === "zh" ? "今晚的连接暂时不可用。请稍后再试。" : "Tonight’s connection is temporarily unavailable. Please try again shortly."));
-    void service.restore().catch(() => undefined);
-    return () => { off(); offError(); service.disconnect(); };
+    void service.restore(controller.signal)
+      .catch((reason) => {
+        if (reason instanceof DOMException && reason.name === "AbortError") return;
+        setError(language === "zh" ? "今晚的连接暂时不可用。请稍后再试。" : "Tonight’s connection is temporarily unavailable. Please try again shortly.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setRestoring(false); });
+    return () => { controller.abort(); off(); offError(); service.disconnect(); };
   }, [language, service]);
   useEffect(() => { if (state.stage !== "connection" || !state.endsAt) return; const tick = () => setSecondsLeft(Math.max(0, Math.ceil((new Date(state.endsAt!).getTime() - Date.now()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.endsAt, state.stage]);
   useEffect(() => { if (state.stage !== "waiting" || !state.enteredQueueAt) return; const tick = () => setQueueSeconds(Math.max(0, Math.floor((Date.now() - new Date(state.enteredQueueAt!).getTime()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.enteredQueueAt, state.stage]);
   const action = (work: () => Promise<void>) => { setError(""); void work().catch((reason) => setError(reason instanceof Error ? reason.message : c("Realtime request failed.", "实时匹配请求未完成。"))); };
   const join = () => { if (!cocktail) return setError(c("Save tonight’s cocktail before joining.", "请先保存今晚的 Cocktail。")); action(() => service.start(signals(profile, cocktail, spirit.id, flavor.id))); };
   const signal = (stage: "reveal" | "searching" | "mutual", label: string, compact = false) => <TonightSignal stage={stage} spirit={spirit.id} flavor={flavor.id} cocktailNumber={num} partnerSeed={candidate?.nickname} compact={compact} label={label} className="mx-auto mb-7 w-52" />;
+
+  if (restoring) {
+    return <main className="second-match flex min-h-dvh items-center justify-center bg-[#080808] px-5"><div className="text-center" role="status" aria-live="polite"><p className="second-micro text-amber-100/58">SECOND ACT</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Restoring tonight…", "正在恢复今晚…")}</h1></div></main>;
+  }
 
   return <main data-stage={state.stage} className="second-match min-h-dvh overflow-x-hidden bg-[#080808] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6"><div className="mx-auto w-full max-w-md">
     <header className="flex min-h-11 items-center justify-between gap-3"><Link href={href} className="inline-flex min-h-11 items-center text-[.62rem] font-semibold uppercase tracking-[.14em] text-white/48">← {c("My drink", "我的酒")}</Link><div className="flex items-center gap-2"><LanguageToggle /><EndTonightControl /></div></header>

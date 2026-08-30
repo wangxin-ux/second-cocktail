@@ -4,7 +4,7 @@ import { createRawSessionToken, hashToken, randomUUID, type TonightSignals } fro
 import { resolveVenueIdFromRequest } from "./venue";
 
 export const tonightCookieName = "second_tonight";
-export const tonightSessionLifetimeMs = 12 * 60 * 60 * 1000;
+export const tonightSessionLifetimeMs = 30 * 60 * 1000;
 
 export type ServerSession = TonightSignals & { id: string; venueId: string; invalidatedAt: string | null };
 

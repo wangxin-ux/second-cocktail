@@ -27,10 +27,11 @@ export class RealtimeMatchService {
     if (!this.socket) this.connect();
     await this.emit("queue.join", { signals: {} });
   }
-  async restore() {
-    const response = await fetch("/api/match-state", { credentials: "same-origin" });
+  async restore(signal?: AbortSignal) {
+    const response = await fetch("/api/match-state", { credentials: "same-origin", cache: "no-store", signal });
     if (!response.ok) return null;
     const body = await response.json() as { state?: CanonicalMatchState };
+    if (signal?.aborted) return null;
     if (body.state) this.publish(body.state);
     if (!this.socket) this.connect();
     return body.state ?? null;

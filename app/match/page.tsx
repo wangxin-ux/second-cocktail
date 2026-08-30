@@ -1,55 +1,55 @@
-"use client";
-
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { headers } from "next/headers";
+import HomeClient from "../home-client";
 import { getFlavor } from "../flavors/flavors";
 import { getSpirit } from "../spirits/spirits";
 import MatchExperience from "./match-experience";
 import RealtimeMatchExperience from "./realtime-match-experience";
-import { useI18n } from "@/lib/i18n";
 import type { DemoMatchScenario } from "@/lib/second/demo-match-service";
+import { getSessionByToken, parseCookie } from "@/server/realtime/session";
+import { resolveVenueIdFromHost } from "@/server/realtime/venue";
 
-function RoutingState() {
-  const { t } = useI18n();
-  return (
-    <main className="flex min-h-[100svh] items-center justify-center bg-[#070707] px-6">
-      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.34em] text-white/45">
-        {t("room")}
-      </p>
-    </main>
-  );
+export const dynamic = "force-dynamic";
+
+type MatchPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function first(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-function MatchPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const spiritId = searchParams.get("spirit") ?? undefined;
-  const flavorId = searchParams.get("flavor") ?? undefined;
-  const demoParam = searchParams.get("demo");
+export default async function MatchPage({ searchParams }: MatchPageProps) {
+  const params = await searchParams;
+  let spirit = getSpirit(first(params.spirit));
+  let flavor = getFlavor(first(params.flavor));
+
+  if (!spirit || !flavor) {
+    try {
+      const requestHeaders = await headers();
+      const venueId = resolveVenueIdFromHost(
+        requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+      );
+      const session = await getSessionByToken(
+        parseCookie(requestHeaders.get("cookie") ?? undefined),
+      );
+      if (session && venueId && session.venueId === venueId) {
+        spirit = getSpirit(session.spirit);
+        flavor = getFlavor(session.flavor);
+      }
+    } catch {
+      // The stable fallback below remains usable if persistence is unavailable.
+    }
+  }
+
+  if (!spirit || !flavor) return <HomeClient />;
+
+  const demoParam = first(params.demo);
   const scenario: DemoMatchScenario = demoParam === "empty" || demoParam === "error" ? demoParam : "default";
-  const spirit = getSpirit(spiritId);
-  const flavor = getFlavor(flavorId);
-
-  useEffect(() => {
-    if (!spirit || !flavor) router.replace("/");
-  }, [flavor, router, spirit]);
-
-  if (!spirit || !flavor) return <RoutingState />;
   const mode = process.env.NEXT_PUBLIC_MATCH_MODE === "demo" ? "demo" : "realtime";
 
-  return mode === "realtime" ? <RealtimeMatchExperience spirit={spirit} flavor={flavor} /> : (
-    <MatchExperience
-      spirit={spirit}
-      flavor={flavor}
-      scenario={scenario}
-    />
-  );
-}
-
-export default function MatchPage() {
-  return (
-    <Suspense fallback={<RoutingState />}>
-      <MatchPageContent />
-    </Suspense>
+  return mode === "realtime" ? (
+    <RealtimeMatchExperience spirit={spirit} flavor={flavor} />
+  ) : (
+    <MatchExperience spirit={spirit} flavor={flavor} scenario={scenario} />
   );
 }
