@@ -51,10 +51,10 @@ function candidateFromSession(viewer: ServerSession, session: ServerSession): Ca
 async function sessionById(client: Pick<PoolClient, "query">, id: string): Promise<ServerSession | null> {
   const result = await client.query<{
     id: string; nickname: string; age: number; age_band: number; energy: ServerSession["energy"]; mbti: ServerSession["mbti"] | null;
-    spirit: ServerSession["spirit"]; flavor: ServerSession["flavor"]; cocktail_id: string; cocktail_name: string; invalidated_at: string | null;
-  }>(`SELECT id,nickname,age,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
+    spirit: ServerSession["spirit"]; flavor: ServerSession["flavor"]; cocktail_id: string; cocktail_name: string; venue_id: string; invalidated_at: string | null;
+  }>(`SELECT id,nickname,age,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,venue_id,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
   const row = result.rows[0];
-  return row ? { id: row.id, nickname: row.nickname, age: row.age, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
+  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
 }
 
 async function pairFor(client: Pick<PoolClient, "query">, sessionId: string, lock = false): Promise<PairRow | null> {
@@ -99,8 +99,8 @@ function decisionForContinue(pair: PairRow, sessionId: string) { return pair.ses
 
 async function enqueue(client: Pick<PoolClient, "query">, session: ServerSession) {
   await client.query(`UPDATE queue_entries SET status='cancelled' WHERE session_id=$1 AND status='waiting'`, [session.id]);
-  await client.query(`INSERT INTO queue_entries (id,session_id,energy,mbti,age_band,spirit,flavor,expires_at,status)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()+($8 || ' seconds')::interval,'waiting')`, [randomUUID(), session.id, session.energy, session.mbti ?? null, session.ageBand, session.spirit, session.flavor, queueLifetimeSeconds]);
+  await client.query(`INSERT INTO queue_entries (id,session_id,venue_id,energy,mbti,age_band,spirit,flavor,expires_at,status)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW()+($9 || ' seconds')::interval,'waiting')`, [randomUUID(), session.id, session.venueId, session.energy, session.mbti ?? null, session.ageBand, session.spirit, session.flavor, queueLifetimeSeconds]);
 }
 
 function score(a: ServerSession, b: ServerSession) {
@@ -110,15 +110,15 @@ function score(a: ServerSession, b: ServerSession) {
 async function tryCreatePair(client: PoolClient, session: ServerSession): Promise<string | null> {
   const candidates = await client.query<{ session_id: string }>(`SELECT q.session_id FROM queue_entries q JOIN tonight_sessions s ON s.id=q.session_id
     WHERE q.status='waiting' AND q.session_id<>$1 AND q.expires_at>NOW() AND q.last_seen_at>NOW()-($2 || ' seconds')::interval
-      AND s.invalidated_at IS NULL AND s.expires_at>NOW()
+      AND q.venue_id=$3 AND s.venue_id=$3 AND s.invalidated_at IS NULL AND s.expires_at>NOW()
       AND NOT EXISTS (SELECT 1 FROM pair_exclusions x WHERE x.session_low_id=LEAST(q.session_id,$1::uuid) AND x.session_high_id=GREATEST(q.session_id,$1::uuid))
-    FOR UPDATE OF q SKIP LOCKED`, [session.id, presenceGraceSeconds]);
+    FOR UPDATE OF q SKIP LOCKED`, [session.id, presenceGraceSeconds, session.venueId]);
   const other = (await Promise.all(candidates.rows.map((row) => sessionById(client, row.session_id)))).filter((value): value is ServerSession => Boolean(value)).sort((a, b) => score(session, b) - score(session, a))[0];
   if (!other) return null;
   await client.query("UPDATE queue_entries SET status='matched' WHERE session_id=ANY($1::uuid[]) AND status='waiting'", [[session.id, other.id]]);
   const pairId = randomUUID();
-  await client.query(`INSERT INTO match_pairs (id,session_a_id,session_b_id,status,candidate_expires_at)
-    VALUES ($1,$2,$3,'candidate',NOW()+($4 || ' seconds')::interval)`, [pairId, session.id, other.id, candidateLifetimeSeconds]);
+  await client.query(`INSERT INTO match_pairs (id,session_a_id,session_b_id,venue_id,status,candidate_expires_at)
+    VALUES ($1,$2,$3,$4,'candidate',NOW()+($5 || ' seconds')::interval)`, [pairId, session.id, other.id, session.venueId, candidateLifetimeSeconds]);
   return pairId;
 }
 

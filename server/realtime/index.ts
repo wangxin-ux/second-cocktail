@@ -5,6 +5,7 @@ import { beginConnection, cancelQueue, decide, decideConnectionContinuation, end
 import { allowRateLimit } from "./rate-limit";
 import type { CanonicalMatchState, ClientToServerEvents, ServerToClientEvents } from "./socket-events";
 import { getMeetingAreas } from "./venue-config";
+import { isAllowedVenueOrigin, resolveVenueIdFromHost } from "./venue";
 
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for the realtime match server.");
 getMeetingAreas();
@@ -21,7 +22,9 @@ const httpServer = createServer((request, response) => {
   }
   response.writeHead(404).end();
 });
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, { cors: { origin, credentials: true } });
+const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+  cors: { origin: (requestOrigin, callback) => callback(null, isAllowedVenueOrigin(requestOrigin)), credentials: true },
+});
 type AuthSocket = Parameters<typeof io.on>[1] extends (socket: infer S) => unknown ? S & { data: { session: ServerSession } } : never;
 
 function room(sessionId: string) { return `session:${sessionId}`; }
@@ -36,7 +39,8 @@ function genericError() { return "Realtime connection is unavailable"; }
 io.use(async (socket, next) => {
   try {
     const session = await getSessionByToken(parseCookie(socket.handshake.headers.cookie));
-    if (!session) return next(new Error("Authentication required"));
+    const venueId = resolveVenueIdFromHost(socket.handshake.headers.host);
+    if (!session || !venueId || session.venueId !== venueId) return next(new Error("Authentication required"));
     socket.data.session = session;
     return next();
   } catch {
