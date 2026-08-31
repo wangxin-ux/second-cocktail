@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { localizeCocktailRecipe } from "@/lib/cocktails/localize-recipe";
 import type { CocktailRecipe } from "@/lib/cocktails/types";
 import { useI18n } from "@/lib/i18n";
+import { clearTonightSession } from "@/lib/second/tonight-privacy";
 
 type BartenderRecipeProps = {
   recipe: CocktailRecipe;
@@ -45,9 +48,27 @@ export default function BartenderRecipe({
   onMakeAnother,
   matchHref,
 }: BartenderRecipeProps) {
+  const router = useRouter();
   const { language, t } = useI18n();
-  const steps = methodSteps(recipe.method);
+  const displayedRecipe = localizeCocktailRecipe(recipe, language);
+  const steps = methodSteps(displayedRecipe.method);
   const [isKept, setIsKept] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
+  const [restartError, setRestartError] = useState("");
+
+  async function restartTonight() {
+    setIsRestarting(true);
+    setRestartError("");
+    const response = await fetch("/api/end-tonight", { method: "POST", credentials: "same-origin" }).catch(() => null);
+    if (!response || (!response.ok && response.status !== 401)) {
+      setRestartError(language === "zh" ? "暂时无法重新开始，请稍后再试。" : "Unable to restart right now. Please try again shortly.");
+      setIsRestarting(false);
+      return;
+    }
+    clearTonightSession();
+    router.replace("/");
+    router.refresh();
+  }
 
   return (
     <section
@@ -59,14 +80,14 @@ export default function BartenderRecipe({
           {t("bartender")}
         </p>
         <h2 className="second-subtitle mt-4 text-stone-100">
-          {recipe.name}
+          {displayedRecipe.name}
         </h2>
 
-        {(recipe.allergens?.length || recipe.caffeineFlag || recipe.liqueurs?.length) ? (
+        {(displayedRecipe.allergens?.length || displayedRecipe.caffeineFlag || displayedRecipe.liqueurs?.length) ? (
           <section className="mt-7 rounded-2xl border border-amber-100/[0.16] bg-amber-100/[0.045] p-4 text-sm leading-6 text-amber-50/75">
-            {recipe.liqueurs?.length ? <p><span className="font-semibold text-amber-100">{t("contains")}:</span> {recipe.liqueurs.join(" · ")}</p> : null}
-            {recipe.allergens?.length ? <p><span className="font-semibold text-amber-100">{t("allergens")}:</span> {recipe.allergens.join(" / ")}</p> : null}
-            {recipe.caffeineFlag ? <p><span className="font-semibold text-amber-100">{t("caffeine")}</span></p> : null}
+            {displayedRecipe.liqueurs?.length ? <p><span className="font-semibold text-amber-100">{t("contains")}:</span> {displayedRecipe.liqueurs.join(" · ")}</p> : null}
+            {displayedRecipe.allergens?.length ? <p><span className="font-semibold text-amber-100">{t("allergens")}:</span> {displayedRecipe.allergens.join(" / ")}</p> : null}
+            {displayedRecipe.caffeineFlag ? <p><span className="font-semibold text-amber-100">{t("caffeine")}</span></p> : null}
           </section>
         ) : null}
 
@@ -75,7 +96,7 @@ export default function BartenderRecipe({
             {t("ingredients")}
           </h3>
           <ul className="mt-4 divide-y divide-white/[0.07] border-y border-white/[0.08]">
-            {recipe.ingredients.map((ingredient, index) => (
+            {displayedRecipe.ingredients.map((ingredient, index) => (
               <li
                 key={`${recipe.id}-${ingredient.name}-${index}`}
                 className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-5 py-4"
@@ -116,7 +137,7 @@ export default function BartenderRecipe({
               {t("glass")}
             </dt>
             <dd className="mt-2 text-sm font-medium text-white/75">
-              {recipe.glass ?? t("notSpecified")}
+              {displayedRecipe.glass ?? t("notSpecified")}
             </dd>
           </div>
           <div>
@@ -124,7 +145,7 @@ export default function BartenderRecipe({
               {t("garnish")}
             </dt>
             <dd className="mt-2 text-sm font-medium leading-5 text-white/75">
-              {recipe.garnish ?? t("notSpecified")}
+              {displayedRecipe.garnish ?? t("notSpecified")}
             </dd>
           </div>
         </dl>
@@ -166,12 +187,10 @@ export default function BartenderRecipe({
           >
             {isGenerating ? t("mixingShort") : t("makeAnother")}
           </button>
-          <Link
-            href="/"
-            className="second-secondary"
-          >
-            {t("startOver")}
-          </Link>
+          <button type="button" disabled={isRestarting} onClick={() => void restartTonight()} className="second-secondary">
+            {isRestarting ? (language === "zh" ? "正在重新开始…" : "Restarting…") : t("startOver")}
+          </button>
+          {restartError ? <p role="alert" className="text-center text-xs text-rose-200/90">{restartError}</p> : null}
         </div>
       </div>
     </section>

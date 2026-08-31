@@ -10,6 +10,7 @@ export type CanonicalMatchState = {
   pairId?: string;
   candidate?: CandidatePreview;
   meetingArea?: MeetingArea;
+  meetingLocation?: string;
   startedAt?: string;
   endsAt?: string;
   continueIntent?: boolean;

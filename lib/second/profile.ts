@@ -46,6 +46,7 @@ export type TonightEnergy = (typeof energyOptions)[number]["id"];
 export type SecondProfile = {
   nickname?: string;
   age?: number;
+  meetingLocation?: string;
   zodiac?: Zodiac;
   mbti?: Mbti;
   energy?: TonightEnergy;
@@ -66,12 +67,17 @@ export function sanitizeProfile(value: unknown): SecondProfile {
     typeof profile.nickname === "string"
       ? profile.nickname.trim().slice(0, 24)
       : "";
+  const meetingLocation =
+    typeof profile.meetingLocation === "string"
+      ? profile.meetingLocation.trim().slice(0, 80)
+      : "";
   const zodiac = zodiacOptions.find((item) => item === profile.zodiac);
   const mbti = mbtiOptions.find((item) => item === profile.mbti);
   const energy = energyOptions.find((item) => item.id === profile.energy)?.id;
 
   return {
     ...(nickname ? { nickname } : {}),
+    ...(meetingLocation ? { meetingLocation } : {}),
     ...(optionalNumber(profile.age, 18, 99) !== undefined
       ? { age: optionalNumber(profile.age, 18, 99) }
       : {}),

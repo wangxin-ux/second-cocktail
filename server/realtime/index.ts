@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import { getSessionByToken, parseCookie, touchSession, type ServerSession } from "./session";
-import { beginConnection, cancelQueue, decide, decideConnectionContinuation, endConnection, expireRealtimeState, getCanonicalState, joinQueue, leaveMatch } from "./matchmaker";
+import { beginConnection, cancelQueue, decide, decideConnectionContinuation, endConnection, expireRealtimeState, getCanonicalState, joinQueue, leaveMatch, matchWaitingQueues } from "./matchmaker";
 import { allowRateLimit } from "./rate-limit";
 import type { CanonicalMatchState, ClientToServerEvents, ServerToClientEvents } from "./socket-events";
 import { getMeetingAreas } from "./venue-config";
@@ -79,6 +79,7 @@ setInterval(() => {
   void expireRealtimeState().then((states) => {
     for (const item of states) publish([item], item.kind === "connection" ? "connection.ended" : "candidate.unavailable");
   }).catch(() => undefined);
+  void matchWaitingQueues().then((states) => publish(states, "candidate.created")).catch(() => undefined);
 }, 5_000).unref();
 
 httpServer.listen(port, host, () => console.info(`Second realtime server listening on ${host}:${port}`));

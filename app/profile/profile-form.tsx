@@ -130,7 +130,6 @@ export default function ProfileForm() {
                 value={profile.nickname ?? ""}
                 onChange={(event) => updateProfile("nickname", event.target.value)}
               />
-              <span className="text-[0.6rem] leading-4 text-white/30">{t("nicknameUse")}</span>
             </label>
 
             <label className="col-span-2 grid gap-2">
@@ -164,7 +163,19 @@ export default function ProfileForm() {
                   {t("ageError")}
                 </span>
               ) : null}
-              <span className="text-[0.6rem] leading-4 text-white/30">{t("ageUse")}</span>
+            </label>
+
+            <label className="col-span-2 grid gap-2">
+              <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                {t("meetingLocation")}
+              </span>
+              <input
+                className={inputClass}
+                maxLength={80}
+                placeholder={t("meetingLocationPlaceholder")}
+                value={profile.meetingLocation ?? ""}
+                onChange={(event) => updateProfile("meetingLocation", event.target.value)}
+              />
             </label>
 
             <label className="grid gap-2">
@@ -188,7 +199,6 @@ export default function ProfileForm() {
                   </option>
                 ))}
               </select>
-              <span className="text-[0.6rem] leading-4 text-white/30">{t("zodiacUse")}</span>
             </label>
 
             <label className="grid gap-2">
@@ -212,7 +222,6 @@ export default function ProfileForm() {
                   </option>
                 ))}
               </select>
-              <span className="text-[0.6rem] leading-4 text-white/30">{t("mbtiUse")}</span>
             </label>
 
             <div className="col-span-2 grid gap-2">
@@ -225,7 +234,6 @@ export default function ProfileForm() {
                   return <button key={energy.id} type="button" role="radio" aria-checked={selected} onClick={() => updateProfile("energy", selected ? undefined : energy.id)} className={`second-focus min-h-14 border-b border-r border-white/[0.12] px-3 text-left text-xs transition-colors ${selected ? "bg-amber-100/[0.12] text-amber-50" : "text-white/52 hover:bg-white/[0.04] hover:text-white/80"}`}>{localizeEnergy(energy.id, energy.label, language)}</button>;
                 })}
               </div>
-              <span className="text-[0.6rem] leading-4 text-white/30">{t("energyUse")}</span>
             </div>
           </div>
 

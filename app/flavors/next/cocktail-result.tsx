@@ -5,6 +5,7 @@ import type { FlavorId } from "../flavors";
 import type { SpiritId } from "../../spirits/spirits";
 import type { CocktailGenerationResponse } from "@/lib/cocktails/types";
 import { generateBrowserCocktail } from "@/lib/cocktails/browser-generator";
+import { localizeCocktailRecipe } from "@/lib/cocktails/localize-recipe";
 import BartenderRecipe from "./bartender-recipe";
 import CocktailReveal from "./cocktail-reveal";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
@@ -60,6 +61,7 @@ export default function CocktailResult({
   const [result, setResult] = useState<CocktailGenerationResponse | null>(null);
   const [revealVersion, setRevealVersion] = useState(0);
   const [isGenerating, setIsGenerating] = useState(true);
+  const { language } = useI18n();
   const { profile, isHydrated: profileReady } = useSecondProfile();
   const profileKey = cocktailProfileSignature(profile);
 
@@ -145,12 +147,14 @@ export default function CocktailResult({
 
   if (!result) return <MixingState spirit={spirit} flavor={flavor} />;
 
+  const displayedRecipe = localizeCocktailRecipe(result.recipe, language);
+
   return (
     <main className="min-h-dvh overflow-x-hidden bg-[#070707]">
       <CocktailReveal
         key={revealVersion}
         cocktailId={result.recipe.id}
-        cocktailName={result.recipe.name}
+        cocktailName={displayedRecipe.name}
         generationMode={result.generationMode}
         spirit={spirit}
         flavor={flavor}
@@ -158,7 +162,7 @@ export default function CocktailResult({
         personalization={result.personalization}
       />
       <BartenderRecipe
-        recipe={result.recipe}
+        recipe={displayedRecipe}
         isGenerating={isGenerating}
         onMakeAnother={() => {
           const current = readTonightCocktailSession();
@@ -171,7 +175,7 @@ export default function CocktailResult({
         matchHref={`/match?${new URLSearchParams({
           spirit: spirit.id,
           flavor: flavor.id,
-          cocktail: result.recipe.name,
+          cocktail: displayedRecipe.name,
           cocktailId: result.recipe.id,
         }).toString()}`}
       />

@@ -7,7 +7,11 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const session = await getSessionForRequest(request);
-    if (!session) return NextResponse.json({ ok: false, error: "Authentication required" }, { status: 401 });
+    if (!session) {
+      const response = NextResponse.json({ ok: false, error: "Authentication required" }, { status: 401 });
+      response.cookies.set(tonightCookieName, "", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 0 });
+      return response;
+    }
     await endConnection(session.id, "end_tonight");
     await leaveMatch(session.id);
     await invalidateSession(session.id);

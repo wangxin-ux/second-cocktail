@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FlavorId } from "../flavors/flavors";
 import type { SpiritId } from "../spirits/spirits";
 import { readTonightCocktailSession } from "@/lib/cocktails/tonight-session";
+import { localizeCocktailRecipe } from "@/lib/cocktails/localize-recipe";
 import { projectCandidatePreview } from "@/lib/second/candidate-visibility";
 import { DemoSafetyService } from "@/lib/second/demo-safety-service";
 import { DemoMatchService, type DemoMatchScenario } from "@/lib/second/demo-match-service";
@@ -95,7 +96,7 @@ export default function MatchExperience({ spirit, flavor, scenario }: MatchExper
       });
       return;
     }
-    const signals = { name: session.result.recipe.name, spirit: session.spirit, flavor: session.flavor };
+    const signals = { name: localizeCocktailRecipe(session.result.recipe, language).name, spirit: session.spirit, flavor: session.flavor };
     queueMicrotask(() => {
       setCocktail(signals);
       setCocktailNumber(getTonightSignalNumber(session.result.recipe.id, session.spirit, session.flavor));
@@ -107,7 +108,7 @@ export default function MatchExperience({ spirit, flavor, scenario }: MatchExper
       setErrorMessage(c.errorBody);
       setStage("error");
     });
-  }, [c.errorBody, c.sessionError, flavor.id, isHydrated, service, spirit.id]);
+  }, [c.errorBody, c.sessionError, flavor.id, isHydrated, language, service, spirit.id]);
 
   useEffect(() => {
     if (stage === "intro" || stage === "consent" || stage === "empty" || stage === "ended" || stage === "error") {

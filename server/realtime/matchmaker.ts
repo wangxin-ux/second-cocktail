@@ -17,7 +17,7 @@ function meetingAreas(): readonly MeetingArea[] { return getMeetingAreas(); }
 type PairRow = {
   id: string; session_a_id: string; session_b_id: string; status: string; a_decision: string | null; b_decision: string | null;
   a_continue: boolean | null; b_continue: boolean | null;
-  candidate_expires_at: Date; meeting_area_id: string | null; created_at: Date;
+  candidate_expires_at: Date; meeting_area_id: string | null; meeting_location: string | null; created_at: Date;
   connection_id: string | null; started_at: Date | null; ends_at: Date | null; ended_at: Date | null;
 };
 type QueueRow = { entered_queue_at: Date };
@@ -50,11 +50,11 @@ function candidateFromSession(viewer: ServerSession, session: ServerSession): Ca
 
 async function sessionById(client: Pick<PoolClient, "query">, id: string): Promise<ServerSession | null> {
   const result = await client.query<{
-    id: string; nickname: string; age: number; age_band: number; energy: ServerSession["energy"]; mbti: ServerSession["mbti"] | null;
+    id: string; nickname: string; age: number; meeting_location: string; age_band: number; energy: ServerSession["energy"]; mbti: ServerSession["mbti"] | null;
     spirit: ServerSession["spirit"]; flavor: ServerSession["flavor"]; cocktail_id: string; cocktail_name: string; venue_id: string; invalidated_at: string | null;
-  }>(`SELECT id,nickname,age,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,venue_id,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
+  }>(`SELECT id,nickname,age,meeting_location,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,venue_id,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
   const row = result.rows[0];
-  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
+  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, meetingLocation: row.meeting_location, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
 }
 
 async function pairFor(client: Pick<PoolClient, "query">, sessionId: string, lock = false): Promise<PairRow | null> {
@@ -76,16 +76,19 @@ async function canonicalState(client: Pick<PoolClient, "query">, sessionId: stri
     const other = await sessionById(client, otherId(pair, sessionId));
     const candidate = viewer && other ? candidateFromSession(viewer, other) : undefined;
     const base = { serverNow: new Date().toISOString(), pairId: pair.id, ...(candidate ? { candidate } : {}) };
-    if (pair.status === "connection" && pair.ends_at && !pair.ended_at) return { ...base, stage: "connection", meetingArea: areaById(pair.meeting_area_id), startedAt: iso(pair.started_at), endsAt: iso(pair.ends_at) };
-    if (pair.status === "time_up") return { ...base, stage: decisionForContinue(pair, sessionId) ? "waiting_for_continue" : "time_up", meetingArea: areaById(pair.meeting_area_id), continueIntent: Boolean(decisionForContinue(pair, sessionId)) };
-    if (pair.status === "continuing") return { ...base, stage: "continuing", meetingArea: areaById(pair.meeting_area_id), continueIntent: true };
-    if (pair.status === "mutual") return { ...base, stage: "mutual", meetingArea: areaById(pair.meeting_area_id) };
+    if (pair.status === "connection" && pair.ends_at && !pair.ended_at) return { ...base, stage: "connection", meetingArea: areaById(pair.meeting_area_id), meetingLocation: pair.meeting_location ?? undefined, startedAt: iso(pair.started_at), endsAt: iso(pair.ends_at) };
+    if (pair.status === "time_up") return { ...base, stage: decisionForContinue(pair, sessionId) ? "waiting_for_continue" : "time_up", meetingArea: areaById(pair.meeting_area_id), meetingLocation: pair.meeting_location ?? undefined, continueIntent: Boolean(decisionForContinue(pair, sessionId)) };
+    if (pair.status === "continuing") return { ...base, stage: "continuing", meetingArea: areaById(pair.meeting_area_id), meetingLocation: pair.meeting_location ?? undefined, continueIntent: true };
+    if (pair.status === "mutual") return { ...base, stage: "mutual", meetingArea: areaById(pair.meeting_area_id), meetingLocation: pair.meeting_location ?? undefined };
     return { ...base, stage: decisionFor(pair, sessionId) === "accept" ? "waiting_for_other" : "candidate" };
   }
   const queue = await client.query<QueueRow>("SELECT entered_queue_at FROM queue_entries WHERE session_id=$1 AND status='waiting' ORDER BY entered_queue_at DESC LIMIT 1", [sessionId]);
   if (queue.rows[0]) return { stage: "waiting", serverNow: new Date().toISOString(), enteredQueueAt: iso(queue.rows[0].entered_queue_at) };
-  const ended = await client.query<PairRow>(`SELECT p.*, c.id AS connection_id,c.started_at,c.ends_at,c.ended_at FROM match_pairs p LEFT JOIN connections c ON c.match_pair_id=p.id
-    WHERE (p.session_a_id=$1 OR p.session_b_id=$1) AND p.status='ended' ORDER BY p.updated_at DESC LIMIT 1`, [sessionId]);
+  const ended = await client.query<PairRow>(`WITH latest_ended_pair AS (
+      SELECT * FROM match_pairs WHERE (session_a_id=$1 OR session_b_id=$1) AND status='ended' ORDER BY updated_at DESC LIMIT 1
+    )
+    SELECT p.*, c.id AS connection_id,c.started_at,c.ends_at,c.ended_at FROM latest_ended_pair p LEFT JOIN connections c ON c.match_pair_id=p.id
+    WHERE NOT EXISTS (SELECT 1 FROM match_pair_dismissals d WHERE d.pair_id=p.id AND d.session_id=$1)`, [sessionId]);
   if (ended.rows[0]) {
     const pair = ended.rows[0];
     const other = await sessionById(client, otherId(pair, sessionId));
@@ -111,7 +114,6 @@ async function tryCreatePair(client: PoolClient, session: ServerSession): Promis
   const candidates = await client.query<{ session_id: string }>(`SELECT q.session_id FROM queue_entries q JOIN tonight_sessions s ON s.id=q.session_id
     WHERE q.status='waiting' AND q.session_id<>$1 AND q.expires_at>NOW() AND q.last_seen_at>NOW()-($2 || ' seconds')::interval
       AND q.venue_id=$3 AND s.venue_id=$3 AND s.invalidated_at IS NULL AND s.expires_at>NOW()
-      AND NOT EXISTS (SELECT 1 FROM pair_exclusions x WHERE x.session_low_id=LEAST(q.session_id,$1::uuid) AND x.session_high_id=GREATEST(q.session_id,$1::uuid))
     FOR UPDATE OF q SKIP LOCKED`, [session.id, presenceGraceSeconds, session.venueId]);
   const other = (await Promise.all(candidates.rows.map((row) => sessionById(client, row.session_id)))).filter((value): value is ServerSession => Boolean(value)).sort((a, b) => score(session, b) - score(session, a))[0];
   if (!other) return null;
@@ -133,6 +135,24 @@ export async function joinQueue(session: ServerSession) {
   });
 }
 
+export async function matchWaitingQueues() {
+  return withTransaction(async (client) => {
+    const waiting = await client.query<{ session_id: string }>(`SELECT session_id FROM queue_entries
+      WHERE status='waiting' AND expires_at>NOW() AND last_seen_at>NOW()-($1 || ' seconds')::interval
+      ORDER BY entered_queue_at ASC LIMIT 100`, [presenceGraceSeconds]);
+    const affected = new Set<string>();
+    for (const row of waiting.rows) {
+      const session = await sessionById(client, row.session_id);
+      if (!session) continue;
+      const pairId = await tryCreatePair(client, session);
+      if (!pairId) continue;
+      const pair = await client.query<{ session_a_id: string; session_b_id: string }>("SELECT session_a_id,session_b_id FROM match_pairs WHERE id=$1", [pairId]);
+      for (const id of [pair.rows[0]?.session_a_id, pair.rows[0]?.session_b_id]) if (id) affected.add(id);
+    }
+    return Promise.all([...affected].map(async (sessionId) => ({ sessionId, state: await canonicalState(client, sessionId) })));
+  });
+}
+
 async function getAffectedStates(client: Pick<PoolClient, "query">, sessionId: string) {
   const pair = await pairFor(client, sessionId);
   const ids = pair ? [pair.session_a_id, pair.session_b_id] : [sessionId];
@@ -150,12 +170,17 @@ export async function decide(session: ServerSession, decision: "accept" | "pass"
       if (refreshed?.a_decision === "accept" && refreshed.b_decision === "accept") {
         const areas = meetingAreas();
         const area = areas[Math.floor(Math.random() * areas.length)];
-        await client.query("UPDATE match_pairs SET status='mutual',mutual_at=NOW(),meeting_area_id=$2,updated_at=NOW() WHERE id=$1", [pair.id, area.id]);
+        const first = await sessionById(client, refreshed.session_a_id);
+        const second = await sessionById(client, refreshed.session_b_id);
+        const locations = [first?.meetingLocation, second?.meetingLocation].filter((location): location is string => Boolean(location));
+        if (locations.length !== 2) throw new Error("A meeting location is required");
+        const meetingLocation = locations[Math.floor(Math.random() * locations.length)];
+        await client.query("UPDATE match_pairs SET status='mutual',mutual_at=NOW(),meeting_area_id=$2,meeting_location=$3,updated_at=NOW() WHERE id=$1", [pair.id, area.id, meetingLocation]);
+        await client.query(`INSERT INTO connections (id,match_pair_id,meeting_area_id,started_at,ends_at)
+          VALUES ($1,$2,$3,NOW(),NOW()+($4 || ' seconds')::interval) ON CONFLICT (match_pair_id) DO NOTHING`, [randomUUID(), pair.id, area.id, connectionLifetimeSeconds]);
+        await client.query("UPDATE match_pairs SET status='connection',updated_at=NOW() WHERE id=$1", [pair.id]);
       }
     } else {
-      const low = pair.session_a_id < pair.session_b_id ? pair.session_a_id : pair.session_b_id;
-      const high = pair.session_a_id < pair.session_b_id ? pair.session_b_id : pair.session_a_id;
-      await client.query("INSERT INTO pair_exclusions (session_low_id,session_high_id,reason,expires_at) VALUES ($1,$2,$3,NOW()+INTERVAL '12 hours') ON CONFLICT (session_low_id,session_high_id) DO UPDATE SET reason=EXCLUDED.reason,expires_at=EXCLUDED.expires_at", [low, high, decision]);
       await client.query(`UPDATE match_pairs SET ${column}=$2,status='passed',updated_at=NOW() WHERE id=$1`, [pair.id, decision]);
       for (const id of [pair.session_a_id, pair.session_b_id]) {
         const peer = await sessionById(client, id);
@@ -207,9 +232,6 @@ export async function decideConnectionContinuation(session: ServerSession, wants
     if (!pair || pair.status !== "time_up") throw new Error("The five-minute connection has not ended");
     const column = pair.session_a_id === session.id ? "a_continue" : "b_continue";
     if (!wantsToContinue) {
-      const low = pair.session_a_id < pair.session_b_id ? pair.session_a_id : pair.session_b_id;
-      const high = pair.session_a_id < pair.session_b_id ? pair.session_b_id : pair.session_a_id;
-      await client.query("INSERT INTO pair_exclusions (session_low_id,session_high_id,reason,expires_at) VALUES ($1,$2,'pass',NOW()+INTERVAL '12 hours') ON CONFLICT (session_low_id,session_high_id) DO UPDATE SET reason=EXCLUDED.reason,expires_at=EXCLUDED.expires_at", [low, high]);
       await client.query("UPDATE connections SET ended_at=COALESCE(ended_at,NOW()),end_reason='finished' WHERE match_pair_id=$1", [pair.id]);
       await client.query("UPDATE match_pairs SET status='ended',updated_at=NOW() WHERE id=$1", [pair.id]);
     } else {
@@ -219,7 +241,19 @@ export async function decideConnectionContinuation(session: ServerSession, wants
         await client.query("UPDATE match_pairs SET status='continuing',updated_at=NOW() WHERE id=$1", [pair.id]);
       }
     }
-    return getAffectedStates(client, session.id);
+    // An ended pair is no longer returned by pairFor, so notify both people explicitly.
+    return Promise.all([pair.session_a_id, pair.session_b_id].map(async (id) => ({ sessionId: id, state: await canonicalState(client, id) })));
+  });
+}
+
+export async function dismissEndedMatch(sessionId: string, pairId: string) {
+  return withTransaction(async (client) => {
+    const pair = await client.query<{ id: string }>(`SELECT id FROM match_pairs
+      WHERE id=$1 AND status='ended' AND (session_a_id=$2 OR session_b_id=$2) FOR UPDATE`, [pairId, sessionId]);
+    if (!pair.rows[0]) throw new Error("Ended match is unavailable");
+    await client.query(`INSERT INTO match_pair_dismissals (pair_id,session_id)
+      VALUES ($1,$2) ON CONFLICT (pair_id,session_id) DO NOTHING`, [pairId, sessionId]);
+    return canonicalState(client, sessionId);
   });
 }
 

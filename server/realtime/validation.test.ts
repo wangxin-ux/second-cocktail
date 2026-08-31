@@ -4,12 +4,13 @@ import { parseCookie } from "./session";
 import { allowRateLimit } from "./rate-limit";
 import { hashToken, validateTonightSignals } from "./validation";
 
-const valid = { nickname: "Mina", age: 26, energy: "open", mbti: "ENFP", spirit: "gin", flavor: "sour", cocktailId: "corpse-reviver", cocktailName: "Corpse Reviver No. 2" };
+const valid = { nickname: "Mina", age: 26, meetingLocation: "Bar counter", energy: "open", mbti: "ENFP", spirit: "gin", flavor: "sour", cocktailId: "corpse-reviver", cocktailName: "Corpse Reviver No. 2" };
 
 test("validates the minimum server-owned tonight signals", () => {
   assert.deepEqual(validateTonightSignals(valid), { ...valid, ageBand: 25 });
   assert.equal(validateTonightSignals({ ...valid, age: 17 }), null);
   assert.equal(validateTonightSignals({ ...valid, nickname: "" }), null);
+  assert.equal(validateTonightSignals({ ...valid, meetingLocation: "" }), null);
   assert.equal(validateTonightSignals({ ...valid, energy: "anything" }), null);
 });
 

@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageToggle from "./language-toggle";
 import { useI18n } from "@/lib/i18n";
-import { confirmAgeForTonight } from "@/lib/second/tonight-privacy";
+import { clearTonightSession, confirmAgeForTonight } from "@/lib/second/tonight-privacy";
 import { useAgeConfirmation } from "./tonight-age-guard";
 import TonightSignal from "./tonight-signal";
 
@@ -15,6 +15,13 @@ export default function Home() {
   const [showGate, setShowGate] = useState(false);
   const [checked, setChecked] = useState(false);
   const gate = language === "zh" ? { title: "今晚仅限 18 岁及以上用户", body: "这是自行确认，不是身份或年龄验证。确认后，你可以开始本次 Tonight Session。", label: "我确认自己已满 18 岁", cancel: "暂不开始", confirm: "确认并继续" } : { title: "Tonight is for guests 18 and over", body: "This is a self-declaration, not identity or age verification. Confirm to begin this Tonight Session.", label: "I confirm that I am 18 or over", cancel: "Not now", confirm: "Confirm and continue" };
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/match-state", { credentials: "same-origin", cache: "no-store", signal: controller.signal })
+      .then((response) => { if (response.status === 401) clearTonightSession(); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
   function beginTonight() {
     if (ageConfirmed) router.push("/profile");
     else setShowGate(true);
