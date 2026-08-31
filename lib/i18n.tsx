@@ -6,6 +6,9 @@ import type { SpiritId } from "@/app/spirits/spirits";
 
 export type Language = "en" | "zh";
 
+// Versioned so a venue-wide reset can retire stale language choices on guest devices.
+const languageStorageKey = "second:language:v2";
+
 const translations = {
   en: {
     back: "Back", continue: "Continue", optional: "Optional", edit: "Edit",
@@ -61,11 +64,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       window.addEventListener("second-language-change", callback);
       return () => window.removeEventListener("second-language-change", callback);
     },
-    () => (window.localStorage.getItem("second:language") === "zh" ? "zh" : "en"),
+    () => (window.localStorage.getItem(languageStorageKey) === "zh" ? "zh" : "en"),
     () => "en",
   );
   const setLanguage = (nextLanguage: Language) => {
-    window.localStorage.setItem("second:language", nextLanguage);
+    window.localStorage.setItem(languageStorageKey, nextLanguage);
     window.dispatchEvent(new Event("second-language-change"));
   };
   useEffect(() => {
