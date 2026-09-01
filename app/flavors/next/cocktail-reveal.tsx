@@ -43,10 +43,10 @@ function whyThisDrink(
     bold: { en: "You chose bold, so the base spirit stays firmly in view.", zh: "你选了浓烈，所以基酒依然站在最前面。" },
   } as const;
   const energyLines = {
-    open: { en: "Tonight feels open, so it was given a little more lift.", zh: "今晚愿意打开自己，所以 Second 给它多一点轻盈感。" },
-    curious: { en: "Your curious energy left room for one less predictable detail.", zh: "今晚偏好奇，所以 Second 给它留了一点意外。" },
-    slow: { en: "Tonight is unhurried, so the structure was softened and simplified.", zh: "今晚想慢一点，所以 Second 让结构更柔和克制。" },
-    celebrating: { en: "Tonight is a celebration, so the finish was made more lifted.", zh: "今晚值得庆祝，所以 Second 让收尾更明亮活跃。" },
+    open: { en: "Tonight feels open, so it was given a little more lift.", zh: "今晚愿意打开自己，所以 second 给它多一点轻盈感。" },
+    curious: { en: "Your curious energy left room for one less predictable detail.", zh: "今晚偏好奇，所以 second 给它留了一点意外。" },
+    slow: { en: "Tonight is unhurried, so the structure was softened and simplified.", zh: "今晚想慢一点，所以 second 让结构更柔和克制。" },
+    celebrating: { en: "Tonight is a celebration, so the finish was made more lifted.", zh: "今晚值得庆祝，所以 second 让收尾更明亮活跃。" },
   } as const;
 
   const lines: string[] = [flavorLines[flavor][language]];
@@ -78,6 +78,9 @@ export default function CocktailReveal({
   const { language, t } = useI18n();
   const localizedMode = generationMode === "fixed" ? t("fixedRecipe") : generationMode === "local" ? t("signature") : generationMode === "ai" ? t("aiSignature") : t("classic");
   const explanation = whyThisDrink(flavor.id, personalization, language);
+  const localizedAura = language === "zh"
+    ? aura.map((item) => ({ Introspective: "内敛", Magnetic: "有吸引力", Fire: "火象", Earth: "土象", Air: "风象", Water: "水象", Open: "开放", Curious: "好奇", Unhurried: "从容", Electric: "热烈" }[item] ?? item))
+    : aura;
 
   return (
     <section className="relative isolate min-h-[100svh] overflow-hidden px-5 pb-[max(3rem,env(safe-area-inset-bottom))] pt-[max(4.5rem,env(safe-area-inset-top))] sm:px-8 sm:pt-24">
@@ -120,7 +123,7 @@ export default function CocktailReveal({
         </p>
         {aura.length > 0 ? (
           <p className="reveal-item reveal-caption second-micro mt-2 text-white/38">
-            {aura.join(" × ")}
+            {localizedAura.join(" × ")}
           </p>
         ) : null}
 

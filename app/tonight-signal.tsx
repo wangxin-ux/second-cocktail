@@ -1,6 +1,9 @@
+"use client";
+
 import type { CSSProperties } from "react";
 import type { FlavorId } from "./flavors/flavors";
 import type { SpiritId } from "./spirits/spirits";
+import { useI18n } from "@/lib/i18n";
 
 export type TonightSignalStage =
   | "invitation"
@@ -59,6 +62,7 @@ export default function TonightSignal({
   className = "",
   label,
 }: TonightSignalProps) {
+  const { language } = useI18n();
   const completionRatio = Math.max(0, Math.min(1, completion / 5));
   const partnerOffset = (hash(partnerSeed) % 11) - 5;
   const style = {
@@ -104,12 +108,12 @@ export default function TonightSignal({
         {stage === "mutual" ? <path className="signal-shared-mark" d="M108 120L120 108L132 120L120 132Z" /> : null}
       </svg>
       <figcaption className="tonight-signal__index">
-        <span>{stage === "mutual" ? "SECOND ACT" : "TONIGHT SIGNAL"}</span>
+        <span>{stage === "mutual" ? (language === "zh" ? "第二幕" : "SECOND ACT") : (language === "zh" ? "今晚信号" : "TONIGHT SIGNAL")}</span>
         <span>{number} / 108</span>
       </figcaption>
       {stage === "mutual" ? (
         <div aria-hidden="true" className="tonight-signal__mutual-labels">
-          <span>YOUR SIGNAL</span><strong>05</strong><span>THEIR SIGNAL</span>
+          <span>{language === "zh" ? "你的信号" : "YOUR SIGNAL"}</span><strong>05</strong><span>{language === "zh" ? "对方信号" : "THEIR SIGNAL"}</span>
         </div>
       ) : null}
     </figure>

@@ -11,7 +11,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://xinxinyuntu.top"),
-  title: { default: "second — a drink, then a connection", template: "%s — second" },
+  title: { default: "second", template: "%s — second" },
   description: "A drink shaped around your night — and, only if you choose, a reason to meet someone.",
   applicationName: "second",
   icons: { icon: [{ url: "/second-mark.svg", type: "image/svg+xml" }, { url: "/favicon.ico" }], apple: "/second-mark.svg" },

@@ -2,7 +2,9 @@ import type { CSSProperties } from "react";
 import type { FlavorId } from "../flavors";
 import type { SpiritId } from "../../spirits/spirits";
 import type { SecondProfile } from "@/lib/second/profile";
-import type { Language } from "@/lib/i18n";
+import { localizeFlavor, localizeSpirit, type Language } from "@/lib/i18n";
+import { flavors } from "../flavors";
+import { spirits } from "../../spirits/spirits";
 import TonightSignal, { getTonightSignalNumber } from "../../tonight-signal";
 
 type CocktailTarotCardProps = {
@@ -110,7 +112,7 @@ export default function CocktailTarotCard({
       />
 
       <div className="tarot-card__topline">
-        <span>SECOND / SIGNATURE</span>
+        <span>{language === "zh" ? "second / 专属" : "SECOND / SIGNATURE"}</span>
         <span>{profile.zodiac ? `${zodiacSymbols[profile.zodiac]} ` : ""}{String(cardNumber).padStart(3, "0")} / 108</span>
       </div>
 
@@ -134,7 +136,7 @@ export default function CocktailTarotCard({
 
       <div className="tarot-card__footer">
         <span>
-          {spirit.toUpperCase()} · {flavor.toUpperCase()}
+          {localizeSpirit(spirit, spirits.find((item) => item.id === spirit)?.name ?? spirit, language)} · {localizeFlavor(flavor, flavors.find((item) => item.id === flavor)?.name ?? flavor, language)}
         </span>
         <span>
           {spiritSymbols[spirit]} {flavorSymbols[flavor]}

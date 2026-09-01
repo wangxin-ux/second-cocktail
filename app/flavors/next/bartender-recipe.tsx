@@ -19,8 +19,9 @@ function formatAmount(
   ingredient: CocktailRecipe["ingredients"][number],
   toTaste: string,
   topUp: string,
+  language: "en" | "zh",
 ) {
-  if (ingredient.amountMl !== undefined) return `${ingredient.amountMl} ml`;
+  if (ingredient.amountMl !== undefined) return language === "zh" ? `${ingredient.amountMl} 毫升` : `${ingredient.amountMl} ml`;
   if (!ingredient.amountText) return toTaste;
 
   const escapedName = ingredient.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -105,7 +106,7 @@ export default function BartenderRecipe({
                   {ingredient.name}
                 </span>
                 <span className="text-right text-[0.94rem] font-semibold tabular-nums text-stone-100">
-                  {formatAmount(ingredient, t("toTaste"), t("topUp"))}
+                  {formatAmount(ingredient, t("toTaste"), t("topUp"), language)}
                 </span>
               </li>
             ))}
@@ -151,12 +152,12 @@ export default function BartenderRecipe({
         </dl>
 
         <section className="relative mt-16 border-y border-amber-100/[0.2] py-9 pl-6 before:absolute before:bottom-9 before:left-0 before:top-9 before:w-px before:bg-amber-100/60">
-          <p className="second-micro text-amber-100/58">SECOND ACT</p>
+          <p className="second-micro text-amber-100/58">{language === "zh" ? "第二幕" : "SECOND ACT"}</p>
           <h3 className="second-subtitle mt-4 max-w-[15ch] text-stone-100">
             {language === "zh" ? "这杯酒之后，想认识今晚的一个人吗？" : "After this drink, would you like to meet one person tonight?"}
           </h3>
           <p className="second-body mt-4">
-            {language === "zh" ? "如果你愿意，Second 会在今晚也选择加入的人中，为你寻找一个可能值得聊五分钟的人。" : "If you choose to, Second will look among people here tonight who also chose to meet someone."}
+            {language === "zh" ? "如果你愿意，second 会在今晚也选择加入的人中，为你寻找一个可能值得聊五分钟的人。" : "If you choose to, second will look among people here tonight who also chose to meet someone."}
           </p>
           <Link
             href={matchHref}

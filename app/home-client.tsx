@@ -14,7 +14,7 @@ export default function Home() {
   const ageConfirmed = useAgeConfirmation();
   const [showGate, setShowGate] = useState(false);
   const [checked, setChecked] = useState(false);
-  const gate = language === "zh" ? { title: "今晚仅限 18 岁及以上用户", body: "这是自行确认，不是身份或年龄验证。确认后，你可以开始本次 Tonight Session。", label: "我确认自己已满 18 岁", cancel: "暂不开始", confirm: "确认并继续" } : { title: "Tonight is for guests 18 and over", body: "This is a self-declaration, not identity or age verification. Confirm to begin this Tonight Session.", label: "I confirm that I am 18 or over", cancel: "Not now", confirm: "Confirm and continue" };
+  const gate = language === "zh" ? { title: "今晚仅限 18 岁及以上用户", body: "这是自行确认，不是身份或年龄验证。确认后，你可以开始今晚的体验。", label: "我确认自己已满 18 岁", cancel: "暂不开始", confirm: "确认并继续" } : { title: "Tonight is for guests 18 and over", body: "This is a self-declaration, not identity or age verification. Confirm to begin this Tonight Session.", label: "I confirm that I am 18 or over", cancel: "Not now", confirm: "Confirm and continue" };
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/match-state", { credentials: "same-origin", cache: "no-store", signal: controller.signal })
@@ -39,9 +39,9 @@ export default function Home() {
       />
 
       <section className="second-shell relative z-10 flex min-h-[calc(100dvh-3.5rem)] flex-col">
-        <div className="flex items-center justify-between"><p className="second-micro text-white/55">Tonight / 01</p><LanguageToggle /></div>
+        <div className="flex items-center justify-between"><p className="second-micro text-white/55">{language === "zh" ? "今晚 / 01" : "Tonight / 01"}</p><LanguageToggle /></div>
         <div className="relative mt-[8svh] sm:mt-[13svh]">
-          <p className="second-kicker">A drink, then a connection.</p>
+          <p className="second-kicker">{language === "zh" ? "一杯酒，然后一次相遇。" : "A drink, then a connection."}</p>
           <h1 className="second-display mt-7 lowercase text-stone-100">second</h1>
           <TonightSignal
             stage="invitation"
@@ -64,7 +64,7 @@ export default function Home() {
             {t("homeCta")}
           </span>
         </button>
-        <p className="second-caption mt-4 text-center">{language === "zh" ? "18+ · 仅限双方接受 · Connection 可选" : "18+ · Mutual only · Connection is optional"}</p>
+        <p className="second-caption mt-4 text-center">{language === "zh" ? "18 岁以上 · 仅限双方接受 · 相遇完全可选" : "18+ · Mutual only · Connection is optional"}</p>
         </div>
       </section>
       {showGate ? <div className="fixed inset-0 z-50 flex items-end bg-black/80 p-5 sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="age-gate-title"><div className="second-dialog text-left"><p className="second-micro">{language === "zh" ? "今晚之前" : "Before tonight"}</p><h2 id="age-gate-title" className="second-subtitle mt-3 text-stone-100">{gate.title}</h2><p className="second-body mt-3">{gate.body}</p><label className="mt-5 flex min-h-14 cursor-pointer items-start gap-3 border-y border-white/[0.14] py-4"><input className="mt-0.5 h-5 w-5 accent-[#c8aa80]" type="checkbox" checked={checked} onChange={(event) => setChecked(event.target.checked)} /><span className="text-sm leading-5 text-white/75">{gate.label}</span></label><div className="mt-5 grid gap-3"><button type="button" disabled={!checked} className="second-primary" onClick={confirm}>{gate.confirm}</button><button type="button" className="second-secondary" onClick={() => setShowGate(false)}>{gate.cancel}</button></div></div></div> : null}

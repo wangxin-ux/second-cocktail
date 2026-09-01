@@ -172,6 +172,111 @@ const labels: Record<string, string> = {
   坚果: "Tree Nuts",
 };
 
+const chineseIngredientNames: Record<string, string> = {
+  "Allspice Dram 多香果": "多香果利口酒",
+  "Allspice Dram": "多香果利口酒",
+  "Amaretto 杏仁": "杏仁利口酒",
+  Amaretto: "杏仁利口酒",
+  "Amaro Averna": "阿维纳苦酒",
+  "Amaro Nonino": "诺尼诺苦酒",
+  Amaro: "意式苦酒",
+  "Apricot Brandy 杏子": "杏子白兰地",
+  "Apricot Brandy": "杏子白兰地",
+  "Blanco 龙舌兰": "银龙舌兰",
+  "Blanco Tequila": "银龙舌兰",
+  "Chambord 覆盆子": "覆盆子利口酒",
+  Chambord: "覆盆子利口酒",
+  "Fernet-Branca": "费尔奈布兰卡苦酒",
+  Fernet: "费尔奈苦酒",
+  "Frangelico 榛果": "榛果利口酒",
+  Frangelico: "榛果利口酒",
+  Galliano: "加利安奴利口酒",
+  "Lillet Blanc": "白利莱酒",
+  Lillet: "利莱酒",
+  Limoncello: "柠檬利口酒",
+  "Maraschino Liqueur": "樱桃利口酒",
+  Maraschino: "樱桃利口酒",
+  "Midori 蜜瓜": "蜜瓜利口酒",
+  Midori: "蜜瓜利口酒",
+  "Orgeat 杏仁糖浆": "杏仁糖浆",
+  Orgeat: "杏仁糖浆",
+  "Peach Schnapps": "桃子利口酒",
+  "Peychaud 苦精": "佩乔苦精",
+  "Peychaud's Bitters": "佩乔苦精",
+  "Reposado 龙舌兰": "陈酿龙舌兰",
+  "Reposado Tequila": "陈酿龙舌兰",
+  "St-Germain 接骨木花": "接骨木花利口酒",
+  "St-Germain": "接骨木花利口酒",
+  "Triple Sec": "橙味利口酒",
+  Gin: "金酒",
+  Vodka: "伏特加",
+  Rum: "朗姆酒",
+  Whisky: "威士忌",
+  Whiskey: "威士忌",
+  Tequila: "龙舌兰",
+  Brandy: "白兰地",
+  "Lemon Juice": "柠檬汁",
+  "Lime Juice": "青柠汁",
+  "Grapefruit Juice": "葡萄柚汁",
+  "Simple Syrup": "单糖浆",
+  "Honey Syrup": "蜂蜜糖浆",
+  "Agave Syrup": "龙舌兰糖浆",
+  "Demerara Syrup": "黄糖糖浆",
+  "Pineapple Juice": "菠萝汁",
+  "Passion Fruit Puree": "百香果果泥",
+  "Orange Juice": "橙汁",
+  "Cranberry Juice": "蔓越莓汁",
+  "Peach Puree": "桃子果泥",
+  "Raspberry Puree": "覆盆子果泥",
+  "Elderflower Liqueur": "接骨木花利口酒",
+  "Orange Liqueur": "橙味利口酒",
+  "Coffee Liqueur": "咖啡利口酒",
+  "Angostura Bitters": "安格仕苦精",
+  "Orange Bitters": "橙味苦精",
+  Basil: "罗勒",
+  Mint: "薄荷",
+  Rosemary: "迷迭香",
+  Cucumber: "黄瓜",
+  "Soda Water": "苏打水",
+  "Chilled Soda Water": "冰镇苏打水",
+  "Tonic Water": "汤力水",
+  "Ginger Beer": "姜汁啤酒",
+  Campari: "金巴利",
+  Aperol: "阿佩罗",
+  "Sweet Vermouth": "甜味美思",
+  "Dry Vermouth": "干味美思",
+};
+
+const chineseGlasses: Record<string, string> = Object.fromEntries(
+  Object.entries(glasses).map(([chinese, english]) => [english, chinese.replaceAll("Martini", "马天尼")]),
+);
+
+const chineseGarnishes: Record<string, string> = {
+  ...Object.fromEntries(Object.entries(garnishes).map(([chinese, english]) => [english, chinese])),
+  "Lemon twist": "柠檬皮螺旋",
+  "Lime wheel": "青柠片",
+  "Orange twist": "橙皮螺旋",
+  "Grated nutmeg": "肉豆蔻碎",
+  "Grapefruit peel": "葡萄柚皮",
+  "Orange wheel": "橙片",
+  "Fresh raspberry": "新鲜覆盆子",
+  "Mint sprig": "薄荷枝",
+  "Cucumber ribbon": "黄瓜薄片",
+  "Grapefruit twist": "葡萄柚皮螺旋",
+};
+
+const chineseLabels: Record<string, string> = Object.fromEntries(
+  Object.entries(labels).map(([chinese, english]) => [english, chinese]),
+);
+
+const spiritNamesZh: Record<string, string> = {
+  gin: "金酒", vodka: "伏特加", rum: "朗姆酒", tequila: "龙舌兰", whisky: "威士忌", brandy: "白兰地",
+};
+const flavorNamesZh: Record<string, string> = {
+  sour: "酸味", sweet: "甜味", bitter: "苦味", fruity: "果香", refreshing: "清爽", bold: "浓烈",
+};
+const variantNamesZh = ["一", "二", "三"] as const;
+
 const hasHan = (value: string) => /\p{Script=Han}/u.test(value);
 
 function translated(value: string | undefined, dictionary: Record<string, string>, fallback: string) {
@@ -186,9 +291,57 @@ function translated(value: string | undefined, dictionary: Record<string, string
   return hasHan(result) ? fallback : result;
 }
 
+function translatedToChinese(value: string | undefined, dictionary: Record<string, string>, fallback: string) {
+  if (!value) return value;
+  const exact = dictionary[value];
+  if (exact) return exact;
+
+  let result = value;
+  for (const [source, target] of Object.entries({ ...chineseIngredientNames, ...dictionary }).sort(([a], [b]) => b.length - a.length)) {
+    result = result.replaceAll(source, target);
+  }
+  result = result
+    .replace(/\bml\b/gi, "毫升")
+    .replace(/\bdashes?\b/gi, "滴")
+    .replace(/\bleaves?\b/gi, "片")
+    .replace(/\bsmall sprig\b/gi, "小枝")
+    .replace(/\bthin slices?\b/gi, "薄片")
+    .replace(/\bswizzle\b/gi, "旋转搅拌")
+    .trim();
+  return /[A-Za-z]/.test(result.replaceAll("second", "")) ? fallback : result;
+}
+
+function chineseRecipeName(recipe: CocktailRecipe) {
+  const fixed = recipe.id.match(/^108-([a-z]+)-([a-z]+)-([1-3])$/);
+  if (fixed) {
+    const [, spirit, flavor, variant] = fixed;
+    return `${spiritNamesZh[spirit] ?? "经典"}${flavorNamesZh[flavor] ?? ""}鸡尾酒（${variantNamesZh[Number(variant) - 1]}）`;
+  }
+  if (recipe.id.startsWith("local-") || recipe.id.startsWith("ai-")) return "second 专属鸡尾酒";
+  return "经典鸡尾酒";
+}
+
 /** Localizes all user-visible recipe fields while preserving the canonical recipe data. */
 export function localizeCocktailRecipe(recipe: CocktailRecipe, language: Language): CocktailRecipe {
-  if (language === "zh") return recipe;
+  if (language === "zh") {
+    return {
+      ...recipe,
+      name: /[A-Za-z]/.test(recipe.name.replaceAll("second", "")) ? chineseRecipeName(recipe) : recipe.name,
+      ingredients: recipe.ingredients.map((ingredient) => ({
+        ...ingredient,
+        name: translatedToChinese(ingredient.name, chineseIngredientNames, "调酒原料")!,
+        ...(ingredient.amountText
+          ? { amountText: translatedToChinese(ingredient.amountText, {}, "适量") }
+          : {}),
+      })),
+      method: translatedToChinese(recipe.method, {}, "按调酒师标准方法调制。")!,
+      ...(recipe.glass ? { glass: translatedToChinese(recipe.glass, chineseGlasses, "鸡尾酒杯") } : {}),
+      ...(recipe.garnish ? { garnish: translatedToChinese(recipe.garnish, chineseGarnishes, "调酒师选择") } : {}),
+      ...(recipe.liqueurs ? { liqueurs: recipe.liqueurs.map((item) => translatedToChinese(item, chineseLabels, "利口酒")!) } : {}),
+      ...(recipe.allergens ? { allergens: recipe.allergens.map((item) => translatedToChinese(item, chineseLabels, "过敏原")!) } : {}),
+      ...(recipe.source ? { source: translatedToChinese(recipe.source, {}, "second 配方") } : {}),
+    };
+  }
 
   return {
     ...recipe,

@@ -21,6 +21,40 @@ import TonightSignal from "../tonight-signal";
 const inputClass =
   "second-field text-sm placeholder:text-white/25";
 
+const zodiacNamesZh: Record<string, string> = {
+  Aries: "白羊座",
+  Taurus: "金牛座",
+  Gemini: "双子座",
+  Cancer: "巨蟹座",
+  Leo: "狮子座",
+  Virgo: "处女座",
+  Libra: "天秤座",
+  Scorpio: "天蝎座",
+  Sagittarius: "射手座",
+  Capricorn: "摩羯座",
+  Aquarius: "水瓶座",
+  Pisces: "双鱼座",
+};
+
+const personalityNamesZh: Record<string, string> = {
+  INTJ: "建筑师型",
+  INTP: "逻辑学家型",
+  ENTJ: "指挥官型",
+  ENTP: "辩论家型",
+  INFJ: "提倡者型",
+  INFP: "调停者型",
+  ENFJ: "主人公型",
+  ENFP: "竞选者型",
+  ISTJ: "物流师型",
+  ISFJ: "守卫者型",
+  ESTJ: "总经理型",
+  ESFJ: "执政官型",
+  ISTP: "鉴赏家型",
+  ISFP: "探险家型",
+  ESTP: "企业家型",
+  ESFP: "表演者型",
+};
+
 function optionalNumberInput(value: string, min: number, max: number) {
   if (!/^\d+$/.test(value)) return undefined;
   const number = Number(value);
@@ -195,7 +229,7 @@ export default function ProfileForm() {
                 <option value="">{t("optional")}</option>
                 {zodiacOptions.map((zodiac) => (
                   <option key={zodiac} value={zodiac}>
-                    {zodiac}
+                    {language === "zh" ? zodiacNamesZh[zodiac] : zodiac}
                   </option>
                 ))}
               </select>
@@ -203,7 +237,7 @@ export default function ProfileForm() {
 
             <label className="grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
-                MBTI
+                {language === "zh" ? "性格类型" : "MBTI"}
               </span>
               <select
                 className={inputClass}
@@ -218,7 +252,7 @@ export default function ProfileForm() {
                 <option value="">{t("optional")}</option>
                 {mbtiOptions.map((mbti) => (
                   <option key={mbti} value={mbti}>
-                    {mbti}
+                    {language === "zh" ? personalityNamesZh[mbti] : mbti}
                   </option>
                 ))}
               </select>
