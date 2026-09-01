@@ -21,7 +21,7 @@ const primary = "second-primary";
 const secondary = "second-secondary";
 const signals = (profile: ReturnType<typeof useSecondProfile>["profile"], cocktail: ReturnType<typeof readTonightCocktailSession>, spirit: SpiritId, flavor: FlavorId, language: "en" | "zh") => ({ nickname: profile.nickname ?? "", age: profile.age ?? 0, meetingLocation: profile.meetingLocation ?? "", energy: profile.energy ?? "open", ...(profile.mbti ? { mbti: profile.mbti } : {}), spirit: cocktail?.spirit ?? spirit, flavor: cocktail?.flavor ?? flavor, cocktailId: cocktail?.result.recipe.id ?? "", cocktailName: cocktail ? localizeCocktailRecipe(cocktail.result.recipe, language).name : "", ageBand: 0 });
 
-type LocalizedMessage = { en: string; zh: string };
+type LocalizedMessage = { en: string; zh: string; profileRequired?: boolean };
 
 function realtimeErrorMessage(reason: unknown, fallback: LocalizedMessage): LocalizedMessage {
   const message = reason instanceof Error ? reason.message : "";
@@ -29,6 +29,7 @@ function realtimeErrorMessage(reason: unknown, fallback: LocalizedMessage): Loca
     return {
       en: "Please complete your tonight profile before joining the queue.",
       zh: "请先完善今晚的个人信息，再加入匹配队列。",
+      profileRequired: true,
     };
   }
   if (message.includes("dismiss the ended match")) {
@@ -134,7 +135,7 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
       {state.stage === "waiting_for_continue" && <div className="text-center">{signal("mutual", c("Shared signal waiting", "共同信号正在等待"), true)}<p className="second-micro text-amber-100/58">{c("WAITING FOR THEM", "等待对方")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("You’d like to continue", "你愿意继续")}</h1><p className="mt-5 text-sm text-white/50">{c("Now leave the choice with them.", "现在，把选择留给对方。")}</p></div>}
       {state.stage === "continuing" && <div className="text-center">{signal("mutual", c("Shared signal", "共同信号"), true)}<p className="second-micro text-amber-100/58">{c("SECOND ACT", "第二幕")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Let the story continue.", "让故事继续。")}</h1><p className="mt-5 text-sm leading-6 text-white/55">{c("Put the phone away. The rest is yours.", "把手机放下，剩下的故事交给你们。")}</p><button type="button" disabled={isReturningToDrink} className={`${primary} mt-8`} onClick={returnToDrink}>{isReturningToDrink ? c("Returning…", "正在返回…") : c("Back to my drink", "回到我的酒")}</button></div>}
       {state.stage === "ended" && <div className="text-center"><p className="second-micro text-amber-100/58">second</p><h1 className="second-screen-title mt-5 text-stone-100">{c("The night continues, so does the story.", "夜晚还在继续，故事也是。")}</h1><div className="mt-8 grid gap-3"><button className={primary} onClick={restartFromEndedMatch}>{c("Meet someone else", "再认识一个人")}</button><button type="button" disabled={isReturningToDrink} className={secondary} onClick={returnFromEndedMatch}>{c("Back to my drink", "回到我的酒")}</button></div></div>}
-      {error && <p role="alert" className="mt-6 text-sm text-rose-200/80">{error[language]}</p>}
+      {error && <p role="alert" className="mt-6 text-sm text-rose-200/80">{error.profileRequired ? <>{c("Please complete your tonight profile (", "请先完善今晚的个人信息（")}<Link href="/profile" className="font-semibold underline decoration-rose-200/60 underline-offset-4">{c("click here", "点击这里")}</Link>{c(") before joining the queue.", "），再加入匹配队列。")}</> : error[language]}</p>}
     </section>
   </div></main>;
 }
