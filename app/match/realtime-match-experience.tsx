@@ -21,14 +21,23 @@ const primary = "second-primary";
 const secondary = "second-secondary";
 const signals = (profile: ReturnType<typeof useSecondProfile>["profile"], cocktail: ReturnType<typeof readTonightCocktailSession>, spirit: SpiritId, flavor: FlavorId, language: "en" | "zh") => ({ nickname: profile.nickname ?? "", age: profile.age ?? 0, meetingLocation: profile.meetingLocation ?? "", energy: profile.energy ?? "open", ...(profile.mbti ? { mbti: profile.mbti } : {}), spirit: cocktail?.spirit ?? spirit, flavor: cocktail?.flavor ?? flavor, cocktailId: cocktail?.result.recipe.id ?? "", cocktailName: cocktail ? localizeCocktailRecipe(cocktail.result.recipe, language).name : "", ageBand: 0 });
 
-function realtimeErrorMessage(reason: unknown, language: "en" | "zh", fallback: { en: string; zh: string }) {
-  if (language === "zh") {
-    const message = reason instanceof Error ? reason.message : "";
-    if (message.includes("tonight signals")) return "请先完善今晚的个人信息，再加入匹配队列。";
-    if (message.includes("dismiss the ended match")) return "暂时无法关闭已结束的匹配，请稍后再试。";
-    return fallback.zh;
+type LocalizedMessage = { en: string; zh: string };
+
+function realtimeErrorMessage(reason: unknown, fallback: LocalizedMessage): LocalizedMessage {
+  const message = reason instanceof Error ? reason.message : "";
+  if (message.includes("tonight signals")) {
+    return {
+      en: "Please complete your tonight profile before joining the queue.",
+      zh: "请先完善今晚的个人信息，再加入匹配队列。",
+    };
   }
-  return reason instanceof Error ? reason.message : fallback.en;
+  if (message.includes("dismiss the ended match")) {
+    return {
+      en: "Unable to dismiss the ended match. Please try again shortly.",
+      zh: "暂时无法关闭已结束的匹配，请稍后再试。",
+    };
+  }
+  return fallback;
 }
 
 function Timer({ seconds }: { seconds: number }) {
@@ -39,7 +48,7 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
   const { profile, isHydrated } = useSecondProfile();
   const { language } = useI18n(); const zh = language === "zh";
   const router = useRouter();
-  const [consented, setConsented] = useState(false); const [error, setError] = useState(""); const [restoring, setRestoring] = useState(true); const [secondsLeft, setSecondsLeft] = useState(300); const [queueSeconds, setQueueSeconds] = useState(0); const [isReturningToDrink, setIsReturningToDrink] = useState(false);
+  const [consented, setConsented] = useState(false); const [error, setError] = useState<LocalizedMessage | null>(null); const [restoring, setRestoring] = useState(true); const [secondsLeft, setSecondsLeft] = useState(300); const [queueSeconds, setQueueSeconds] = useState(0); const [isReturningToDrink, setIsReturningToDrink] = useState(false);
   const [state, setState] = useState<CanonicalMatchState>({ stage: "idle", serverNow: new Date().toISOString() });
   const service = useMemo(() => new RealtimeMatchService(), []); const cocktail = isHydrated ? readTonightCocktailSession() : null;
   const href = `/flavors/next?${new URLSearchParams({ spirit: spirit.id, flavor: flavor.id }).toString()}`;
@@ -53,23 +62,24 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
         ? { stage: "idle", serverNow: next.serverNow }
         : next);
     });
-    const offError = service.subscribeError(() => setError(language === "zh" ? "今晚的连接暂时不可用。请稍后再试。" : "Tonight’s connection is temporarily unavailable. Please try again shortly."));
+    const unavailable = { en: "Tonight’s connection is temporarily unavailable. Please try again shortly.", zh: "今晚的连接暂时不可用。请稍后再试。" };
+    const offError = service.subscribeError(() => setError(unavailable));
     void service.restore(controller.signal)
       .catch((reason) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setError(language === "zh" ? "今晚的连接暂时不可用。请稍后再试。" : "Tonight’s connection is temporarily unavailable. Please try again shortly.");
+        setError(unavailable);
       })
       .finally(() => { if (!controller.signal.aborted) setRestoring(false); });
     return () => { controller.abort(); off(); offError(); service.disconnect(); };
-  }, [language, service]);
+  }, [service]);
   useEffect(() => { if (state.stage !== "connection" || !state.endsAt) return; const tick = () => setSecondsLeft(Math.max(0, Math.ceil((new Date(state.endsAt!).getTime() - Date.now()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.endsAt, state.stage]);
   useEffect(() => { if (state.stage !== "waiting" || !state.enteredQueueAt) return; const tick = () => setQueueSeconds(Math.max(0, Math.floor((Date.now() - new Date(state.enteredQueueAt!).getTime()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.enteredQueueAt, state.stage]);
-  const action = (work: () => Promise<void>) => { setError(""); void work().catch((reason) => setError(realtimeErrorMessage(reason, language, { en: "Realtime request failed.", zh: "实时匹配请求未完成，请稍后再试。" }))); };
+  const action = (work: () => Promise<void>) => { setError(null); void work().catch((reason) => setError(realtimeErrorMessage(reason, { en: "Realtime request failed.", zh: "实时匹配请求未完成，请稍后再试。" }))); };
   const join = () => action(() => cocktail
     ? service.start(signals(profile, cocktail, spirit.id, flavor.id, language))
     : service.joinExistingSession());
   const returnToDrink = () => {
-    setError("");
+    setError(null);
     setIsReturningToDrink(true);
     void service.leave()
       .then(() => {
@@ -81,7 +91,7 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
   const returnFromEndedMatch = () => {
     const pairId = state.pairId;
     if (!pairId) return router.push(href);
-    setError("");
+    setError(null);
     setIsReturningToDrink(true);
     void service.dismissEndedMatch(pairId)
       .then(() => {
@@ -89,21 +99,21 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
         router.push(href);
       })
       .catch((reason) => {
-        setError(realtimeErrorMessage(reason, language, { en: "Unable to return to your drink.", zh: "暂时无法回到我的酒，请稍后再试。" }));
+        setError(realtimeErrorMessage(reason, { en: "Unable to return to your drink.", zh: "暂时无法回到我的酒，请稍后再试。" }));
         setIsReturningToDrink(false);
       });
   };
   const restartFromEndedMatch = () => {
     const pairId = state.pairId;
     if (!pairId) return setState({ stage: "idle", serverNow: new Date().toISOString() });
-    setError("");
+    setError(null);
     void service.dismissEndedMatch(pairId)
       .then((next) => {
         dismissEndedPair(pairId);
         setConsented(false);
         setState(next);
       })
-      .catch((reason) => setError(realtimeErrorMessage(reason, language, { en: "Unable to start again.", zh: "暂时无法重新开始，请稍后再试。" })));
+      .catch((reason) => setError(realtimeErrorMessage(reason, { en: "Unable to start again.", zh: "暂时无法重新开始，请稍后再试。" })));
   };
   const signal = (stage: "reveal" | "searching" | "mutual", label: string, compact = false) => <TonightSignal stage={stage} spirit={spirit.id} flavor={flavor.id} cocktailNumber={num} partnerSeed={candidate?.nickname} compact={compact} label={label} className="mx-auto mb-7 w-52" />;
 
@@ -124,7 +134,7 @@ export default function RealtimeMatchExperience({ spirit, flavor }: { spirit: { 
       {state.stage === "waiting_for_continue" && <div className="text-center">{signal("mutual", c("Shared signal waiting", "共同信号正在等待"), true)}<p className="second-micro text-amber-100/58">{c("WAITING FOR THEM", "等待对方")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("You’d like to continue", "你愿意继续")}</h1><p className="mt-5 text-sm text-white/50">{c("Now leave the choice with them.", "现在，把选择留给对方。")}</p></div>}
       {state.stage === "continuing" && <div className="text-center">{signal("mutual", c("Shared signal", "共同信号"), true)}<p className="second-micro text-amber-100/58">{c("SECOND ACT", "第二幕")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Let the story continue.", "让故事继续。")}</h1><p className="mt-5 text-sm leading-6 text-white/55">{c("Put the phone away. The rest is yours.", "把手机放下，剩下的故事交给你们。")}</p><button type="button" disabled={isReturningToDrink} className={`${primary} mt-8`} onClick={returnToDrink}>{isReturningToDrink ? c("Returning…", "正在返回…") : c("Back to my drink", "回到我的酒")}</button></div>}
       {state.stage === "ended" && <div className="text-center"><p className="second-micro text-amber-100/58">second</p><h1 className="second-screen-title mt-5 text-stone-100">{c("The night continues, so does the story.", "夜晚还在继续，故事也是。")}</h1><div className="mt-8 grid gap-3"><button className={primary} onClick={restartFromEndedMatch}>{c("Meet someone else", "再认识一个人")}</button><button type="button" disabled={isReturningToDrink} className={secondary} onClick={returnFromEndedMatch}>{c("Back to my drink", "回到我的酒")}</button></div></div>}
-      {error && <p role="alert" className="mt-6 text-sm text-rose-200/80">{error}</p>}
+      {error && <p role="alert" className="mt-6 text-sm text-rose-200/80">{error[language]}</p>}
     </section>
   </div></main>;
 }
