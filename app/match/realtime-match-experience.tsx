@@ -24,7 +24,7 @@ const signals = (profile: ReturnType<typeof useSecondProfile>["profile"], cockta
 function realtimeErrorMessage(reason: unknown, language: "en" | "zh", fallback: { en: string; zh: string }) {
   if (language === "zh") {
     const message = reason instanceof Error ? reason.message : "";
-    if (message.includes("tonight signals")) return "请先完善今晚的信息，再加入匹配队列。";
+    if (message.includes("tonight signals")) return "请先完善今晚的个人信息，再加入匹配队列。";
     if (message.includes("dismiss the ended match")) return "暂时无法关闭已结束的匹配，请稍后再试。";
     return fallback.zh;
   }
