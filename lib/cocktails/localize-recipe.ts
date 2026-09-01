@@ -269,14 +269,6 @@ const chineseLabels: Record<string, string> = Object.fromEntries(
   Object.entries(labels).map(([chinese, english]) => [english, chinese]),
 );
 
-const spiritNamesZh: Record<string, string> = {
-  gin: "金酒", vodka: "伏特加", rum: "朗姆酒", tequila: "龙舌兰", whisky: "威士忌", brandy: "白兰地",
-};
-const flavorNamesZh: Record<string, string> = {
-  sour: "酸味", sweet: "甜味", bitter: "苦味", fruity: "果香", refreshing: "清爽", bold: "浓烈",
-};
-const variantNamesZh = ["一", "二", "三"] as const;
-
 const hasHan = (value: string) => /\p{Script=Han}/u.test(value);
 
 function translated(value: string | undefined, dictionary: Record<string, string>, fallback: string) {
@@ -311,22 +303,13 @@ function translatedToChinese(value: string | undefined, dictionary: Record<strin
   return /[A-Za-z]/.test(result.replaceAll("second", "")) ? fallback : result;
 }
 
-function chineseRecipeName(recipe: CocktailRecipe) {
-  const fixed = recipe.id.match(/^108-([a-z]+)-([a-z]+)-([1-3])$/);
-  if (fixed) {
-    const [, spirit, flavor, variant] = fixed;
-    return `${spiritNamesZh[spirit] ?? "经典"}${flavorNamesZh[flavor] ?? ""}鸡尾酒（${variantNamesZh[Number(variant) - 1]}）`;
-  }
-  if (recipe.id.startsWith("local-") || recipe.id.startsWith("ai-")) return "second 专属鸡尾酒";
-  return "经典鸡尾酒";
-}
-
 /** Localizes all user-visible recipe fields while preserving the canonical recipe data. */
 export function localizeCocktailRecipe(recipe: CocktailRecipe, language: Language): CocktailRecipe {
   if (language === "zh") {
     return {
       ...recipe,
-      name: /[A-Za-z]/.test(recipe.name.replaceAll("second", "")) ? chineseRecipeName(recipe) : recipe.name,
+      // Cocktail names are proper names and stay canonical in every language.
+      name: recipe.name,
       ingredients: recipe.ingredients.map((ingredient) => ({
         ...ingredient,
         name: translatedToChinese(ingredient.name, chineseIngredientNames, "调酒原料")!,
