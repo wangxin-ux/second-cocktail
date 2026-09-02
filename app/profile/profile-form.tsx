@@ -61,7 +61,7 @@ function optionalNumberInput(value: string, min: number, max: number) {
   return number >= min && number <= max ? number : undefined;
 }
 
-export default function ProfileForm() {
+export default function ProfileForm({ directMatch = false }: { directMatch?: boolean }) {
   const router = useRouter();
   const { profile, isHydrated } = useSecondProfile();
   const { language, t } = useI18n();
@@ -73,6 +73,12 @@ export default function ProfileForm() {
   const ageIsInvalid =
     ageInput !== "" && optionalNumberInput(ageInput, 18, 99) === undefined;
   const completedFields = completedProfileFields(profile);
+  const directProfileComplete = Boolean(
+    profile.nickname?.trim() &&
+    profile.age &&
+    profile.meetingLocation?.trim() &&
+    profile.energy,
+  );
 
   function updateProfile<Key extends keyof SecondProfile>(
     key: Key,
@@ -93,11 +99,11 @@ export default function ProfileForm() {
     updateProfile(key, optionalNumberInput(digits, min, max));
   }
 
-  function continueToSpirits(event: FormEvent<HTMLFormElement>) {
+  function continueToNextStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (ageIsInvalid) return;
+    if (ageIsInvalid || (directMatch && !directProfileComplete)) return;
     writeSecondProfile(profile);
-    router.push("/spirits");
+    router.push(directMatch ? "/match" : "/spirits");
   }
 
   return (
@@ -120,15 +126,15 @@ export default function ProfileForm() {
 
         <section className="pb-7 pt-6">
           <p className="second-micro text-amber-100/58">
-            {t("profileEyebrow")}
+            {directMatch ? (language === "zh" ? "今晚的匹配档案" : "Tonight’s matching profile") : t("profileEyebrow")}
           </p>
           <h1 className="second-screen-title mt-4 max-w-sm text-stone-100">
-            {t("profileTitle")}
+            {directMatch ? (language === "zh" ? "完善信息，直接开始匹配。" : "Complete your profile, then start matching.") : t("profileTitle")}
           </h1>
           <p className="second-body mt-5 max-w-sm">
-            {t("profileBody")}
+            {directMatch ? (language === "zh" ? "填写昵称、年龄、公开见面地点和今晚状态。提交后将直接进入匹配，不会生成鸡尾酒或卡牌。" : "Add your nickname, age, public meeting location, and tonight’s energy. You’ll go straight to matching without generating a cocktail or card.") : t("profileBody")}
           </p>
-          <div className="second-rule mt-7 grid gap-0 text-xs leading-5 text-white/55">
+          {directMatch ? <div className="second-rule mt-7 border-y border-white/[0.08] py-4 text-xs leading-5 text-white/55">{language === "zh" ? "这些信息仅用于今晚的匹配和双方同意后的见面。" : "This information is used only for tonight’s matching and a mutually accepted meeting."}</div> : <div className="second-rule mt-7 grid gap-0 text-xs leading-5 text-white/55">
             <div className="grid grid-cols-[6.5rem_1fr] border-b border-white/[0.08] py-4">
               <span className="second-micro text-amber-100/65">
                 {t("shapesDrink")}
@@ -141,7 +147,7 @@ export default function ProfileForm() {
               </span>
               <span>{t("connectionLaterFields")}</span>
             </div>
-          </div>
+          </div>}
           <PrivacySummary className="mt-3 min-h-11 text-xs text-white/45 underline decoration-white/15 underline-offset-4" />
           <TonightSignal
             stage="profile"
@@ -151,7 +157,7 @@ export default function ProfileForm() {
           />
         </section>
 
-        <form onSubmit={continueToSpirits}>
+        <form onSubmit={continueToNextStep}>
           <div className="grid grid-cols-2 gap-x-5 gap-y-7">
             <label className="col-span-2 grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
@@ -160,6 +166,7 @@ export default function ProfileForm() {
               <input
                 className={inputClass}
                 maxLength={24}
+                required={directMatch}
                 placeholder={t("nicknamePlaceholder")}
                 value={profile.nickname ?? ""}
                 onChange={(event) => updateProfile("nickname", event.target.value)}
@@ -180,6 +187,7 @@ export default function ProfileForm() {
                 maxLength={2}
                 pattern="[0-9]*"
                 placeholder="18+"
+                required={directMatch}
                 type="text"
                 value={ageInput}
                 onChange={(event) =>
@@ -207,6 +215,7 @@ export default function ProfileForm() {
                 className={inputClass}
                 maxLength={80}
                 placeholder={t("meetingLocationPlaceholder")}
+                required={directMatch}
                 value={profile.meetingLocation ?? ""}
                 onChange={(event) => updateProfile("meetingLocation", event.target.value)}
               />
@@ -274,12 +283,15 @@ export default function ProfileForm() {
           <div className="sticky bottom-0 z-20 mt-7 bg-gradient-to-t from-[#080808] via-[#080808]/96 to-transparent pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-6">
             <button
               className="second-primary"
+              disabled={directMatch && !directProfileComplete}
               type="submit"
             >
-              {t("continue")}
+              {directMatch ? (language === "zh" ? "开始匹配" : "Start matching") : t("continue")}
             </button>
             <p className="mt-3 text-center text-[0.6rem] tracking-[0.08em] text-white/25">
-              {isHydrated && completedFields > 0
+              {directMatch
+                ? (language === "zh" ? "昵称、年龄、见面地点和今晚状态为必填项" : "Nickname, age, meeting location, and tonight’s energy are required")
+                : isHydrated && completedFields > 0
                 ? t("profileSaved", { count: completedFields })
                 : t("profileSkip")}
             </p>

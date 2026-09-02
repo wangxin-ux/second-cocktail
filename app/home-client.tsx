@@ -8,7 +8,7 @@ import { clearTonightSession, confirmAgeForTonight } from "@/lib/second/tonight-
 import { useAgeConfirmation } from "./tonight-age-guard";
 import TonightSignal from "./tonight-signal";
 
-export default function Home() {
+export default function Home({ directMatch = false }: { directMatch?: boolean }) {
   const { language, t } = useI18n();
   const router = useRouter();
   const ageConfirmed = useAgeConfirmation();
@@ -41,17 +41,17 @@ export default function Home() {
       <section className="second-shell relative z-10 flex min-h-[calc(100dvh-3.5rem)] flex-col">
         <div className="flex items-center justify-between"><p className="second-micro text-white/55">{language === "zh" ? "今晚 / 01" : "Tonight / 01"}</p><LanguageToggle /></div>
         <div className="relative mt-[8svh] sm:mt-[13svh]">
-          <p className="second-kicker">{language === "zh" ? "一杯酒，然后一次相遇。" : "A drink, then a connection."}</p>
+          <p className="second-kicker">{directMatch ? (language === "zh" ? "填写信息，然后开始匹配。" : "Complete your profile, then start matching.") : (language === "zh" ? "一杯酒，然后一次相遇。" : "A drink, then a connection.")}</p>
           <h1 className="second-display mt-7 lowercase text-stone-100">second</h1>
-          <TonightSignal
+          {!directMatch ? <TonightSignal
             stage="invitation"
             compact
             label={language === "zh" ? "尚未完成的今晚信号，来自 108 杯酒" : "An unfinished signal for tonight, drawn from 108 drinks"}
             className="ml-auto -mt-5 mr-[2%] opacity-90"
-          />
+          /> : null}
           <div className="ml-[18%] mt-8 border-l border-white/20 pl-5">
-            <p className="second-section-title max-w-[13ch] text-stone-100">{t("homeTitle")}</p>
-            <p className="second-body mt-4 max-w-[25rem]">{t("homeBody")}</p>
+            <p className="second-section-title max-w-[13ch] text-stone-100">{directMatch ? (language === "zh" ? "今晚，认识一个值得聊五分钟的人。" : "Meet someone worth five minutes tonight.") : t("homeTitle")}</p>
+            <p className="second-body mt-4 max-w-[25rem]">{directMatch ? (language === "zh" ? "完善个人信息后直接进入匹配。只有双方都接受，才会显示见面地点。" : "Complete your profile and go straight to matching. A meeting location appears only after both people accept.") : t("homeBody")}</p>
           </div>
         </div>
         <div className="mt-auto pt-10">
@@ -61,7 +61,7 @@ export default function Home() {
           className="second-primary"
         >
           <span className="flex items-center justify-center">
-            {t("homeCta")}
+            {directMatch ? (language === "zh" ? "填写信息并开始" : "Complete profile and begin") : t("homeCta")}
           </span>
         </button>
         <p className="second-caption mt-4 text-center">{language === "zh" ? "18 岁以上 · 仅限双方接受 · 相遇完全可选" : "18+ · Mutual only · Connection is optional"}</p>

@@ -22,13 +22,14 @@ export default async function MatchPage({ searchParams }: MatchPageProps) {
   const params = await searchParams;
   let spirit = getSpirit(first(params.spirit));
   let flavor = getFlavor(first(params.flavor));
+  let venueId: string | null = null;
 
-  if (!spirit || !flavor) {
-    try {
-      const requestHeaders = await headers();
-      const venueId = resolveVenueIdFromHost(
-        requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
-      );
+  try {
+    const requestHeaders = await headers();
+    venueId = resolveVenueIdFromHost(
+      requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+    );
+    if (!spirit || !flavor) {
       const session = await getSessionByToken(
         parseCookie(requestHeaders.get("cookie") ?? undefined),
       );
@@ -36,19 +37,25 @@ export default async function MatchPage({ searchParams }: MatchPageProps) {
         spirit = getSpirit(session.spirit);
         flavor = getFlavor(session.flavor);
       }
-    } catch {
-      // The stable fallback below remains usable if persistence is unavailable.
     }
+  } catch {
+    // The stable fallback below remains usable if persistence is unavailable.
   }
 
-  if (!spirit || !flavor) return <HomeClient />;
+  const directMatch = venueId === "main";
+  if (directMatch) {
+    spirit ??= getSpirit("gin");
+    flavor ??= getFlavor("refreshing");
+  }
+
+  if (!spirit || !flavor) return <HomeClient directMatch={directMatch} />;
 
   const demoParam = first(params.demo);
   const scenario: DemoMatchScenario = demoParam === "empty" || demoParam === "error" ? demoParam : "default";
   const mode = process.env.NEXT_PUBLIC_MATCH_MODE === "demo" ? "demo" : "realtime";
 
   return mode === "realtime" ? (
-    <RealtimeMatchExperience spirit={spirit} flavor={flavor} />
+    <RealtimeMatchExperience spirit={spirit} flavor={flavor} directMatch={directMatch} />
   ) : (
     <MatchExperience spirit={spirit} flavor={flavor} scenario={scenario} />
   );

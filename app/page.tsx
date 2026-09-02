@@ -20,7 +20,7 @@ const resumableStages = new Set([
   "continuing",
 ]);
 
-async function getResumeSelection() {
+async function getHomeContext() {
   try {
     const requestHeaders = await headers();
     const venueId = resolveVenueIdFromHost(
@@ -29,21 +29,22 @@ async function getResumeSelection() {
     const session = await getSessionByToken(
       parseCookie(requestHeaders.get("cookie") ?? undefined),
     );
-    if (!session || !venueId || session.venueId !== venueId) return null;
+    if (!session || !venueId || session.venueId !== venueId) return { venueId, selection: null };
 
     const state = await getCanonicalState(session.id);
-    if (!resumableStages.has(state.stage)) return null;
+    if (!resumableStages.has(state.stage)) return { venueId, selection: null };
 
     const spirit = getSpirit(session.spirit);
     const flavor = getFlavor(session.flavor);
-    return spirit && flavor ? { spirit, flavor } : null;
+    return { venueId, selection: spirit && flavor ? { spirit, flavor } : null };
   } catch {
-    return null;
+    return { venueId: null, selection: null };
   }
 }
 
 export default async function HomePage() {
-  const selection = await getResumeSelection();
-  if (selection) return <RealtimeMatchExperience {...selection} />;
-  return <HomeClient />;
+  const { venueId, selection } = await getHomeContext();
+  const directMatch = venueId === "main";
+  if (selection) return <RealtimeMatchExperience {...selection} directMatch={directMatch} />;
+  return <HomeClient directMatch={directMatch} />;
 }
