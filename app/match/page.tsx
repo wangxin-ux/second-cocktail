@@ -42,7 +42,8 @@ export default async function MatchPage({ searchParams }: MatchPageProps) {
     // The stable fallback below remains usable if persistence is unavailable.
   }
 
-  const directMatch = venueId === "main";
+  const agentAutoStart = venueId === "agent" && first(params.autostart) === "agent";
+  const directMatch = venueId === "main" || agentAutoStart;
   if (directMatch) {
     spirit ??= getSpirit("gin");
     flavor ??= getFlavor("refreshing");
@@ -55,7 +56,7 @@ export default async function MatchPage({ searchParams }: MatchPageProps) {
   const mode = process.env.NEXT_PUBLIC_MATCH_MODE === "demo" ? "demo" : "realtime";
 
   return mode === "realtime" ? (
-    <RealtimeMatchExperience spirit={spirit} flavor={flavor} directMatch={directMatch} />
+    <RealtimeMatchExperience spirit={spirit} flavor={flavor} directMatch={directMatch} autoStart={agentAutoStart} />
   ) : (
     <MatchExperience spirit={spirit} flavor={flavor} scenario={scenario} />
   );

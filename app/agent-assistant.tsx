@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { AgentProposal, AgentReply } from "@/lib/agent/intent";
+import { agentAutoStartStorageKey, type AgentProposal, type AgentReply } from "@/lib/agent/intent";
 import { readTonightCocktailSession } from "@/lib/cocktails/tonight-session";
 import { useI18n } from "@/lib/i18n";
 import { readSecondProfile, writeSecondProfile } from "@/lib/second/profile";
@@ -128,14 +128,13 @@ export default function AgentAssistant() {
         addStatus(zh ? "先补全昵称、年龄、见面地点和今晚状态，我已经保留了你的匹配偏好。" : "Complete your nickname, age, meeting location, and tonight’s energy. I kept your matching preferences.");
         return;
       }
-      if (!cocktail) {
-        setOpen(false);
-        router.push("/spirits");
-        addStatus(zh ? "匹配前先选定今晚的酒。" : "Choose tonight’s drink before matching.");
-        return;
-      }
       setOpen(false);
-      router.push(`/match?${new URLSearchParams({ spirit: cocktail.spirit, flavor: cocktail.flavor }).toString()}`);
+      window.sessionStorage.setItem(agentAutoStartStorageKey, "1");
+      router.push(`/match?${new URLSearchParams({
+        spirit: cocktail?.spirit ?? "gin",
+        flavor: cocktail?.flavor ?? "refreshing",
+        autostart: "agent",
+      }).toString()}`);
       return;
     }
     const paths = { home: "/", profile: "/profile", spirits: "/spirits" } as const;

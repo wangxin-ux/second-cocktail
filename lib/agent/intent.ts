@@ -4,6 +4,7 @@ import { energyOptions, genderOptions, genderPreferenceOptions, mbtiOptions, san
 import { fixedMenuRecipes } from "@/lib/cocktails/fixed-menu";
 
 export const agentDestinations = ["home", "profile", "spirits", "match"] as const;
+export const agentAutoStartStorageKey = "second:agent-autostart-match:v1";
 export type AgentDestination = (typeof agentDestinations)[number];
 
 export type AgentProposal = {

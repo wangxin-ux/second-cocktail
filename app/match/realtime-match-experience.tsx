@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FlavorId } from "../flavors/flavors";
 import type { SpiritId } from "../spirits/spirits";
 import LanguageToggle from "../language-toggle";
@@ -16,6 +16,7 @@ import { useSecondProfile } from "@/lib/second/use-second-profile";
 import { localizeEnergy, useI18n } from "@/lib/i18n";
 import { energyOptions } from "@/lib/second/profile";
 import { dismissEndedPair, wasEndedPairDismissed } from "@/lib/second/tonight-privacy";
+import { agentAutoStartStorageKey } from "@/lib/agent/intent";
 
 const primary = "second-primary";
 const secondary = "second-secondary";
@@ -45,11 +46,14 @@ function Timer({ seconds }: { seconds: number }) {
   return <p role="timer" aria-label={`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`} className="font-[family-name:var(--font-display)] text-[clamp(6rem,28vw,12rem)] leading-none tracking-[-.08em] tabular-nums text-stone-100">{String(Math.floor(seconds / 60)).padStart(2, "0")}:{String(seconds % 60).padStart(2, "0")}</p>;
 }
 
-export default function RealtimeMatchExperience({ spirit, flavor, directMatch = false }: { spirit: { id: SpiritId; name: string }; flavor: { id: FlavorId; name: string }; directMatch?: boolean }) {
+export default function RealtimeMatchExperience({ spirit, flavor, directMatch = false, autoStart = false }: { spirit: { id: SpiritId; name: string }; flavor: { id: FlavorId; name: string }; directMatch?: boolean; autoStart?: boolean }) {
   const { profile, isHydrated } = useSecondProfile();
   const { language } = useI18n(); const zh = language === "zh";
   const router = useRouter();
   const [consented, setConsented] = useState(false); const [error, setError] = useState<LocalizedMessage | null>(null); const [restoring, setRestoring] = useState(true); const [secondsLeft, setSecondsLeft] = useState(300); const [queueSeconds, setQueueSeconds] = useState(0); const [isReturningToDrink, setIsReturningToDrink] = useState(false);
+  const [autoStartAuthorized, setAutoStartAuthorized] = useState(false);
+  const [autoJoining, setAutoJoining] = useState(false);
+  const autoStartAttempted = useRef(false);
   const [state, setState] = useState<CanonicalMatchState>({ stage: "idle", serverNow: new Date().toISOString() });
   const service = useMemo(() => new RealtimeMatchService(), []); const cocktail = isHydrated ? readTonightCocktailSession() : null;
   const href = directMatch ? "/profile" : `/flavors/next?${new URLSearchParams({ spirit: spirit.id, flavor: flavor.id }).toString()}`;
@@ -75,10 +79,31 @@ export default function RealtimeMatchExperience({ spirit, flavor, directMatch = 
   }, [service]);
   useEffect(() => { if (state.stage !== "connection" || !state.endsAt) return; const tick = () => setSecondsLeft(Math.max(0, Math.ceil((new Date(state.endsAt!).getTime() - Date.now()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.endsAt, state.stage]);
   useEffect(() => { if (state.stage !== "waiting" || !state.enteredQueueAt) return; const tick = () => setQueueSeconds(Math.max(0, Math.floor((Date.now() - new Date(state.enteredQueueAt!).getTime()) / 1000))); tick(); const id = window.setInterval(tick, 1000); return () => clearInterval(id); }, [state.enteredQueueAt, state.stage]);
+  useEffect(() => {
+    if (!autoStart) return;
+    const authorized = window.sessionStorage.getItem(agentAutoStartStorageKey) === "1";
+    window.sessionStorage.removeItem(agentAutoStartStorageKey);
+    const timer = window.setTimeout(() => {
+      setAutoStartAuthorized(authorized);
+      setAutoJoining(authorized);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [autoStart]);
   const action = (work: () => Promise<void>) => { setError(null); void work().catch((reason) => setError(realtimeErrorMessage(reason, { en: "Realtime request failed.", zh: "实时匹配请求未完成，请稍后再试。" }))); };
   const join = () => action(() => cocktail || directMatch
     ? service.start(signals(profile, cocktail, spirit.id, flavor.id, language, directMatch))
     : service.joinExistingSession());
+  useEffect(() => {
+    if (!autoStart || !autoStartAuthorized || restoring || !isHydrated || state.stage !== "idle" || autoStartAttempted.current) return;
+    autoStartAttempted.current = true;
+    setConsented(true);
+    setError(null);
+    void service.start(signals(profile, cocktail, spirit.id, flavor.id, language, directMatch))
+      .catch((reason) => {
+        setError(realtimeErrorMessage(reason, { en: "Realtime request failed.", zh: "实时匹配请求未完成，请稍后再试。" }));
+        setAutoJoining(false);
+      });
+  }, [autoStart, autoStartAuthorized, cocktail, directMatch, flavor.id, isHydrated, language, profile, restoring, service, spirit.id, state.stage]);
   const returnToDrink = () => {
     setError(null);
     setIsReturningToDrink(true);
@@ -125,7 +150,8 @@ export default function RealtimeMatchExperience({ spirit, flavor, directMatch = 
   return <main data-stage={state.stage} className="second-match min-h-dvh overflow-x-hidden bg-[#080808] px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] sm:px-6"><div className="mx-auto w-full max-w-md">
     <header className="flex min-h-11 items-center justify-between gap-3">{state.stage === "idle" ? <Link href={href} className="inline-flex min-h-11 items-center text-[.62rem] font-semibold uppercase tracking-[.14em] text-white/48">← {directMatch ? c("My profile", "我的信息") : c("My drink", "我的酒")}</Link> : <button type="button" disabled={isReturningToDrink} onClick={state.stage === "ended" ? returnFromEndedMatch : returnToDrink} className="inline-flex min-h-11 items-center text-[.62rem] font-semibold uppercase tracking-[.14em] text-white/48">← {directMatch ? c("My profile", "我的信息") : c("My drink", "我的酒")}</button>}<div className="flex items-center gap-2"><LanguageToggle /><EndTonightControl /></div></header>
     <section className="second-stage flex min-h-[calc(100svh-5rem)] flex-col justify-center py-7">
-      {state.stage === "idle" && <div><p className="second-micro text-amber-100/58">{c("SECOND ACT", "第二幕")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Before we begin", "在开始之前")}</h1><ul className="mt-7 space-y-3 border-y border-white/[.12] py-6 text-sm leading-6 text-white/58"><li>{c("They will see a limited Tonight Profile.", "对方会看到有限的今晚档案。")}</li><li>{c("No contact details are shared.", "不会看到联系方式。")}</li><li>{c("A meeting area appears only after mutual yes.", "只有双方都愿意见面后才会出现见面地点。")}</li><li>{c("You can leave tonight’s matching at any time.", "你随时可以离开今晚的匹配。")}</li></ul><label className="mt-6 flex min-h-11 cursor-pointer gap-3 text-xs leading-5 text-white/54"><input checked={consented} onChange={(e) => setConsented(e.target.checked)} type="checkbox" className="mt-0.5 h-4 w-4 accent-[#eadfce]" /><span>{c("I understand these boundaries and want to start looking.", "我理解这些边界，并愿意开始寻找。")}</span></label><button disabled={!consented} className={`${primary} mt-6`} onClick={join}>{c("Start looking", "开始寻找")}</button><Link href={href} className={`${secondary} mt-3`}>{directMatch ? c("Back to my profile", "返回我的信息") : c("Back to my drink", "返回我的酒")}</Link></div>}
+      {state.stage === "idle" && autoJoining && !error && <div className="text-center" role="status" aria-live="polite">{signal("searching", c("Joining tonight’s queue", "正在加入今晚的匹配"))}<p className="second-micro text-amber-100/58">{c("SECOND ACT", "第二幕")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Starting your search…", "正在开始寻找…")}</h1></div>}
+      {state.stage === "idle" && (!autoJoining || error) && <div><p className="second-micro text-amber-100/58">{c("SECOND ACT", "第二幕")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("Before we begin", "在开始之前")}</h1><ul className="mt-7 space-y-3 border-y border-white/[.12] py-6 text-sm leading-6 text-white/58"><li>{c("They will see a limited Tonight Profile.", "对方会看到有限的今晚档案。")}</li><li>{c("No contact details are shared.", "不会看到联系方式。")}</li><li>{c("A meeting area appears only after mutual yes.", "只有双方都愿意见面后才会出现见面地点。")}</li><li>{c("You can leave tonight’s matching at any time.", "你随时可以离开今晚的匹配。")}</li></ul><label className="mt-6 flex min-h-11 cursor-pointer gap-3 text-xs leading-5 text-white/54"><input checked={consented} onChange={(e) => setConsented(e.target.checked)} type="checkbox" className="mt-0.5 h-4 w-4 accent-[#eadfce]" /><span>{c("I understand these boundaries and want to start looking.", "我理解这些边界，并愿意开始寻找。")}</span></label><button disabled={!consented} className={`${primary} mt-6`} onClick={join}>{c("Start looking", "开始寻找")}</button><Link href={href} className={`${secondary} mt-3`}>{directMatch ? c("Back to my profile", "返回我的信息") : c("Back to my drink", "返回我的酒")}</Link></div>}
       {state.stage === "waiting" && <div className="text-center" role="status" aria-live="polite">{signal("reveal", c("One signal waiting", "一个信号正在等待"))}<p className="second-micro text-amber-100/58">{c("WAITING", "等待中")}</p><p className="mt-2 font-[family-name:var(--font-display)] text-4xl tabular-nums text-stone-100">{String(Math.floor(queueSeconds / 60)).padStart(2, "0")}:{String(queueSeconds % 60).padStart(2, "0")}</p><h1 className="second-screen-title mt-6 text-stone-100">{c("Looking for another signal tonight", "正在寻找今晚的另一个信号")}</h1><p className="mx-auto mt-5 max-w-xs text-sm leading-6 text-white/48">{c("You don’t need to watch the screen. We’ll let you know when someone appears.", "不用一直盯着屏幕。有人出现时，我们会告诉你。")}</p><button className={`${secondary} mx-auto mt-8 max-w-xs`} onClick={() => action(() => service.cancelQueue())}>{c("Cancel", "取消等待")}</button></div>}
       {state.stage === "candidate" && candidate && <div>{signal("searching", c("Two signals drawing closer", "两个信号正在靠近"))}<p className="second-micro text-amber-100/58">{c("ONE POSSIBLE INTRODUCTION", "一次可能的介绍")}</p><h1 className="second-screen-title mt-4 text-stone-100">{c("Someone appeared tonight", "今晚，有一个人出现了")}</h1><p className="mt-5 text-lg text-white/86">{candidate.nickname} <span className="text-white/36">·</span> {candidate.age}</p><p className="mt-2 text-xs font-semibold tracking-[.15em] text-white/42">{energy ? localizeEnergy(energy.id, energy.label, language) : candidate.energy}</p><div className="mt-6 border-y border-white/[.13] py-5"><p className="second-micro text-amber-100/58">{c("WHY YOU TWO", "为什么是你们")}</p><ul className="mt-3 space-y-2 text-sm leading-6 text-white/66">{candidate.reasons.map((reason) => <li key={reason.id}>— {reason[language]}</li>)}</ul></div><div className="mt-5 border-l border-amber-100/45 py-1 pl-4"><p className="second-micro text-white/40">{c("OPENING SIGNAL", "开场信号")}</p><p className="mt-2 text-[1rem] leading-6 text-stone-100/88">“{candidate.openingPrompt[language]}”</p></div><div className="mt-7 grid gap-3"><button className={primary} onClick={() => action(() => service.accept())}>{c("I’d meet them", "愿意见面")}</button><button className={secondary} onClick={() => action(() => service.pass())}>{c("Pass", "暂时不见")}</button><button className="min-h-11 text-xs text-white/45 underline underline-offset-4" onClick={() => action(() => service.block())}>{c("Do not show this person again tonight", "今晚不再匹配此人")}</button></div></div>}
       {state.stage === "waiting_for_other" && candidate && <div className="text-center">{signal("searching", c("Your signal is waiting", "你的信号正在等待"))}<p className="second-micro text-amber-100/58">{c("WAITING FOR THEM", "等待对方")}</p><h1 className="second-screen-title mt-5 text-stone-100">{c("You said yes", "你愿意见面了")}</h1><p className="mx-auto mt-5 max-w-xs text-sm leading-6 text-white/50">{c("Now leave the choice with them. If they agree too, second will tell you where to meet.", "现在，把选择留给对方。如果对方也愿意，second 会告诉你们在哪里见面。")}</p><button className={`${secondary} mx-auto mt-8 max-w-xs`} onClick={() => action(() => service.leave())}>{c("Leave tonight’s match", "离开今晚的匹配")}</button></div>}
