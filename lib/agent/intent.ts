@@ -1,6 +1,7 @@
 import { flavors, type FlavorId } from "@/app/flavors/flavors";
 import { spirits, type SpiritId } from "@/app/spirits/spirits";
 import { energyOptions, genderOptions, genderPreferenceOptions, mbtiOptions, sanitizeProfile, type SecondProfile } from "@/lib/second/profile";
+import { fixedMenuRecipes } from "@/lib/cocktails/fixed-menu";
 
 export const agentDestinations = ["home", "profile", "spirits", "match"] as const;
 export type AgentDestination = (typeof agentDestinations)[number];
@@ -8,6 +9,7 @@ export type AgentDestination = (typeof agentDestinations)[number];
 export type AgentProposal = {
   profilePatch?: SecondProfile;
   drink?: { spirit: SpiritId; flavor: FlavorId };
+  cocktail?: { id: string; name: string; spirit: SpiritId; flavor: FlavorId };
   destination?: AgentDestination;
 };
 
@@ -42,9 +44,12 @@ export function sanitizeAgentReply(value: unknown, fallback: string): AgentReply
   const spirit = spirits.find((item) => item.id === rawDrink?.spirit)?.id;
   const flavor = flavors.find((item) => item.id === rawDrink?.flavor)?.id;
   const destination = agentDestinations.find((item) => item === rawProposal.destination);
+  const cocktailId = typeof rawProposal.cocktailId === "string" ? rawProposal.cocktailId : "";
+  const cocktail = fixedMenuRecipes.find((item) => item.id === cocktailId);
   const proposal: AgentProposal = {
     ...(profilePatch && Object.keys(profilePatch).length ? { profilePatch } : {}),
     ...(spirit && flavor ? { drink: { spirit, flavor } } : {}),
+    ...(cocktail ? { cocktail: { id: cocktail.id, name: cocktail.name, spirit: cocktail.baseSpirit, flavor: cocktail.flavor } } : {}),
     ...(destination ? { destination } : {}),
   };
   return Object.keys(proposal).length ? { reply: reply || fallback, proposal } : { reply: reply || fallback };

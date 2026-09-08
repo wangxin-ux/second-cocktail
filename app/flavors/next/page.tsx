@@ -6,6 +6,7 @@ import { getSpirit } from "../../spirits/spirits";
 import { getFlavor } from "../flavors";
 import CocktailResult from "./cocktail-result";
 import { useI18n } from "@/lib/i18n";
+import { fixedMenuRecipes } from "@/lib/cocktails/fixed-menu";
 
 function RoutingState() {
   const { t } = useI18n();
@@ -23,8 +24,10 @@ function CocktailResultPageContent() {
   const searchParams = useSearchParams();
   const spiritId = searchParams.get("spirit") ?? undefined;
   const flavorId = searchParams.get("flavor") ?? undefined;
+  const cocktailId = searchParams.get("cocktailId") ?? undefined;
   const selectedSpirit = getSpirit(spiritId);
   const selectedFlavor = getFlavor(flavorId);
+  const requestedRecipe = fixedMenuRecipes.find((recipe) => recipe.id === cocktailId && recipe.baseSpirit === spiritId && recipe.flavor === flavorId);
 
   useEffect(() => {
     if (!selectedSpirit) {
@@ -39,7 +42,7 @@ function CocktailResultPageContent() {
   if (!selectedSpirit || !selectedFlavor) return <RoutingState />;
 
   return (
-    <CocktailResult spirit={selectedSpirit} flavor={selectedFlavor} />
+    <CocktailResult spirit={selectedSpirit} flavor={selectedFlavor} requestedRecipe={requestedRecipe} />
   );
 }
 

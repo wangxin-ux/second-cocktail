@@ -10,6 +10,17 @@ import { isAgeConfirmed } from "@/lib/second/tonight-privacy";
 import { useSecondProfile } from "@/lib/second/use-second-profile";
 
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; proposal?: AgentProposal };
+const messagesKey = "second:agent-messages:v1";
+
+function readMessages(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const value = JSON.parse(window.sessionStorage.getItem(messagesKey) ?? "[]");
+    return Array.isArray(value) ? value.slice(-30).filter((item): item is ChatMessage => item && typeof item.id === "string" && (item.role === "user" || item.role === "assistant") && typeof item.content === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 function id() {
   return window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -23,11 +34,12 @@ export default function AgentAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(readMessages);
   const logRef = useRef<HTMLDivElement>(null);
   const zh = language === "zh";
 
   useEffect(() => {
+    window.sessionStorage.setItem(messagesKey, JSON.stringify(messages.slice(-30)));
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
@@ -50,7 +62,7 @@ export default function AgentAssistant() {
         body: JSON.stringify({
           message: content,
           language,
-          history: messages.slice(-6).map(({ role, content: previous }) => ({ role, content: previous })),
+          history: messages.slice(-12).map(({ role, content: previous }) => ({ role, content: previous })),
           context: {
             pathname,
             ageConfirmed: isAgeConfirmed(),
@@ -91,11 +103,16 @@ export default function AgentAssistant() {
 
     const cocktail = readTonightCocktailSession();
     let target = proposal.destination;
-    if (proposal.drink) target = target ?? "match";
+    if (proposal.drink || proposal.cocktail) target = target ?? "match";
     if (target && target !== "home" && !isAgeConfirmed()) {
       setOpen(false);
       router.push("/");
       addStatus(zh ? "请先在首页确认已满 18 岁，再继续今晚。" : "Confirm that you are 18 or over on the home page before continuing.");
+      return;
+    }
+    if (proposal.cocktail) {
+      setOpen(false);
+      router.push(`/flavors/next?${new URLSearchParams({ spirit: proposal.cocktail.spirit, flavor: proposal.cocktail.flavor, cocktailId: proposal.cocktail.id }).toString()}`);
       return;
     }
     if (proposal.drink) {

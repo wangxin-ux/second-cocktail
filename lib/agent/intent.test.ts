@@ -8,6 +8,7 @@ test("keeps only supported agent actions and profile values", () => {
     proposal: {
       profilePatch: { minPartnerHeightCm: 180, preferredGender: "man", age: 8, unknown: "x" },
       drink: { spirit: "gin", flavor: "refreshing" },
+      cocktailId: "108-gin-refreshing-1",
       destination: "match",
       url: "https://example.com",
     },
@@ -16,6 +17,7 @@ test("keeps only supported agent actions and profile values", () => {
     proposal: {
       profilePatch: { preferredGender: "man", minPartnerHeightCm: 180 },
       drink: { spirit: "gin", flavor: "refreshing" },
+      cocktail: { id: "108-gin-refreshing-1", name: "Tom Collins", spirit: "gin", flavor: "refreshing" },
       destination: "match",
     },
   });

@@ -17,10 +17,12 @@ import {
 } from "@/lib/cocktails/tonight-session";
 import { localizeFlavor, localizeSpirit, useI18n } from "@/lib/i18n";
 import TonightSignal from "../../tonight-signal";
+import type { FixedMenuRecipe } from "@/lib/cocktails/fixed-menu";
 
 type CocktailResultProps = {
   spirit: { id: SpiritId; name: string };
   flavor: { id: FlavorId; name: string };
+  requestedRecipe?: FixedMenuRecipe;
 };
 
 function minimumMixingTime() {
@@ -55,6 +57,7 @@ function MixingState({
 export default function CocktailResult({
   spirit,
   flavor,
+  requestedRecipe,
 }: CocktailResultProps) {
   const requestStarted = useRef(false);
   const requestInFlight = useRef(false);
@@ -81,16 +84,19 @@ export default function CocktailResult({
 
     try {
       const [data] = await Promise.all([
-        Promise.resolve().then(() =>
-          generateBrowserCocktail({
+        Promise.resolve().then(() => requestedRecipe && variation === 0 ? {
+          recipe: requestedRecipe,
+          generationMode: "fixed" as const,
+          personalization: {},
+          referenceCocktail: { id: requestedRecipe.id, name: requestedRecipe.name },
+        } : generateBrowserCocktail({
             spirit: spirit.id,
             flavor: flavor.id,
             energy: profile.energy,
             mbti: profile.mbti,
             signatureSeed: getTonightSeed(),
             variation,
-          }),
-        ),
+          })),
         minimumMixingTime(),
       ]);
 
@@ -124,7 +130,7 @@ export default function CocktailResult({
       requestInFlight.current = false;
       setIsGenerating(false);
     }
-  }, [flavor.id, profile.energy, profile.mbti, profileKey, spirit.id]);
+  }, [flavor.id, profile.energy, profile.mbti, profileKey, requestedRecipe, spirit.id]);
 
   useEffect(() => {
     if (!profileReady || requestStarted.current) return;
@@ -134,7 +140,8 @@ export default function CocktailResult({
       stored &&
       stored.spirit === spirit.id &&
       stored.flavor === flavor.id &&
-      stored.profileKey === profileKey
+      stored.profileKey === profileKey &&
+      (!requestedRecipe || stored.result.recipe.id === requestedRecipe.id)
     ) {
       queueMicrotask(() => {
         setResult(stored.result);
@@ -143,7 +150,7 @@ export default function CocktailResult({
       return;
     }
     queueMicrotask(() => void generateCocktail(0));
-  }, [flavor.id, generateCocktail, profileKey, profileReady, spirit.id]);
+  }, [flavor.id, generateCocktail, profileKey, profileReady, requestedRecipe, spirit.id]);
 
   if (!result) return <MixingState spirit={spirit} flavor={flavor} />;
 

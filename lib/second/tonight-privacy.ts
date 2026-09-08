@@ -76,6 +76,7 @@ export function clearTonightSession() {
     blockedCandidatesStorageKey,
     currentMatchStorageKey,
     dismissedEndedPairStorageKey,
+    "second:agent-messages:v1",
   ].forEach((key) => window.sessionStorage.removeItem(key));
   window.dispatchEvent(new Event("second-profile-change"));
   notifyTonightSessionChange();
