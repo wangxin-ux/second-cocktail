@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { sanitizeAgentReply } from "./intent";
+import { agentProposalNeedsConfirmation, sanitizeAgentReply } from "./intent";
 
 test("keeps only supported agent actions and profile values", () => {
   assert.deepEqual(sanitizeAgentReply({
@@ -25,4 +25,12 @@ test("keeps only supported agent actions and profile values", () => {
 
 test("drops malformed proposals", () => {
   assert.deepEqual(sanitizeAgentReply({ reply: "可以聊聊。", proposal: { destination: "https://bad.example" } }, "fallback"), { reply: "可以聊聊。" });
+});
+
+test("only drink and matching proposals require confirmation", () => {
+  assert.equal(agentProposalNeedsConfirmation({ profilePatch: { nickname: "宝宝" } }), false);
+  assert.equal(agentProposalNeedsConfirmation({ destination: "profile" }), false);
+  assert.equal(agentProposalNeedsConfirmation({ destination: "match" }), true);
+  assert.equal(agentProposalNeedsConfirmation({ drink: { spirit: "gin", flavor: "refreshing" } }), true);
+  assert.equal(agentProposalNeedsConfirmation({ cocktail: { id: "108-gin-refreshing-1", name: "Tom Collins", spirit: "gin", flavor: "refreshing" } }), true);
 });

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { agentAutoStartStorageKey, type AgentProposal, type AgentReply } from "@/lib/agent/intent";
+import { agentAutoStartStorageKey, agentProposalNeedsConfirmation, type AgentProposal, type AgentReply } from "@/lib/agent/intent";
 import { readTonightCocktailSession } from "@/lib/cocktails/tonight-session";
 import { useI18n } from "@/lib/i18n";
 import { readSecondProfile, writeSecondProfile } from "@/lib/second/profile";
@@ -84,6 +84,7 @@ export default function AgentAssistant() {
       if (!response.ok) throw new Error("unavailable");
       const result = await response.json() as AgentReply;
       setMessages((current) => [...current, { id: id(), role: "assistant", content: result.reply, proposal: result.proposal }]);
+      if (result.proposal && !agentProposalNeedsConfirmation(result.proposal)) apply(result.proposal, false);
     } catch {
       setMessages((current) => [...current, { id: id(), role: "assistant", content: zh ? "宝宝，今晚助手暂时没有连上。你仍然可以继续点击页面操作。" : "Baby, the assistant is temporarily unavailable. You can keep using the page controls." }]);
     } finally {
@@ -96,7 +97,7 @@ export default function AgentAssistant() {
     setMessages((current) => [...current, { id: id(), role: "assistant", content: content.startsWith(salutation) ? content : `${salutation}${content}` }]);
   }
 
-  function apply(proposal: AgentProposal) {
+  function apply(proposal: AgentProposal, announce = true) {
     const current = readSecondProfile();
     const nextProfile = proposal.profilePatch ? { ...current, ...proposal.profilePatch } : current;
     if (proposal.profilePatch) writeSecondProfile(nextProfile);
@@ -143,7 +144,7 @@ export default function AgentAssistant() {
       router.push(paths[target as keyof typeof paths]);
       return;
     }
-    addStatus(zh ? "已更新。页面上的点击操作仍然可以继续使用。" : "Updated. You can keep using the page controls as usual.");
+    if (announce) addStatus(zh ? "已更新。页面上的点击操作仍然可以继续使用。" : "Updated. You can keep using the page controls as usual.");
   }
 
   return <>
@@ -160,7 +161,7 @@ export default function AgentAssistant() {
         <div className="agent-message agent-message--assistant"><p>{greeting}</p></div>
         {messages.map((message) => <div key={message.id} className={`agent-message agent-message--${message.role}`}>
           <p>{message.content}</p>
-          {message.proposal ? <button type="button" className="agent-apply" onClick={() => apply(message.proposal!)}>{zh ? "确认执行" : "Confirm"}</button> : null}
+          {message.proposal && agentProposalNeedsConfirmation(message.proposal) ? <button type="button" className="agent-apply" onClick={() => apply(message.proposal!)}>{zh ? "确认执行" : "Confirm"}</button> : null}
         </div>)}
         {busy ? <div className="agent-message agent-message--assistant" role="status"><span className="agent-thinking" aria-label={zh ? "正在思考" : "Thinking"}><i /><i /><i /></span></div> : null}
       </div>

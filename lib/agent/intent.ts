@@ -19,6 +19,10 @@ export type AgentReply = {
   proposal?: AgentProposal;
 };
 
+export function agentProposalNeedsConfirmation(proposal: AgentProposal) {
+  return proposal.destination === "match" || Boolean(proposal.drink || proposal.cocktail);
+}
+
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
