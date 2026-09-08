@@ -21,12 +21,12 @@ export async function getSessionByToken(token: string | null, client: Pick<PoolC
 
 async function querySession(client: Pick<PoolClient, "query"> | typeof db, tokenHash: string): Promise<ServerSession | null> {
   const result = await client.query<{
-    id: string; nickname: string; age: number; meeting_location: string; age_band: number; energy: TonightSignals["energy"]; mbti: TonightSignals["mbti"] | null;
+    id: string; nickname: string; age: number; height_cm: number | null; gender: TonightSignals["gender"] | null; preferred_gender: TonightSignals["preferredGender"] | null; min_partner_height_cm: number | null; meeting_location: string; age_band: number; energy: TonightSignals["energy"]; mbti: TonightSignals["mbti"] | null;
     spirit: TonightSignals["spirit"]; flavor: TonightSignals["flavor"]; cocktail_id: string; cocktail_name: string; venue_id: string; invalidated_at: string | null;
-  }>(`SELECT id, nickname, age, meeting_location, age_band, energy, mbti, spirit, flavor, cocktail_id, cocktail_name, venue_id, invalidated_at
+  }>(`SELECT id, nickname, age, height_cm, gender, preferred_gender, min_partner_height_cm, meeting_location, age_band, energy, mbti, spirit, flavor, cocktail_id, cocktail_name, venue_id, invalidated_at
       FROM tonight_sessions WHERE token_hash = $1 AND invalidated_at IS NULL AND expires_at > NOW()`, [tokenHash]);
   const row = result.rows[0];
-  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, meetingLocation: row.meeting_location, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
+  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, ...(row.height_cm ? { heightCm: row.height_cm } : {}), ...(row.gender ? { gender: row.gender } : {}), ...(row.preferred_gender ? { preferredGender: row.preferred_gender } : {}), ...(row.min_partner_height_cm ? { minPartnerHeightCm: row.min_partner_height_cm } : {}), meetingLocation: row.meeting_location, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
 }
 
 export async function getSessionForRequest(request: Request) {
@@ -40,16 +40,16 @@ export async function createOrRefreshSession(signals: TonightSignals, existingTo
   const existing = await getSessionByToken(existingToken);
   const expiresAt = new Date(Date.now() + tonightSessionLifetimeMs);
   if (existing && existingToken && existing.venueId === venueId) {
-    await db.query(`UPDATE tonight_sessions SET nickname=$2, age=$3, meeting_location=$4, age_band=$5, energy=$6, mbti=$7, spirit=$8, flavor=$9,
-      cocktail_id=$10, cocktail_name=$11, last_seen_at=NOW(), expires_at=$12 WHERE id=$1`,
-      [existing.id, signals.nickname, signals.age, signals.meetingLocation, signals.ageBand, signals.energy, signals.mbti ?? null, signals.spirit, signals.flavor, signals.cocktailId, signals.cocktailName, expiresAt]);
+    await db.query(`UPDATE tonight_sessions SET nickname=$2, age=$3, height_cm=$4, gender=$5, preferred_gender=$6, min_partner_height_cm=$7, meeting_location=$8, age_band=$9, energy=$10, mbti=$11, spirit=$12, flavor=$13,
+      cocktail_id=$14, cocktail_name=$15, last_seen_at=NOW(), expires_at=$16 WHERE id=$1`,
+      [existing.id, signals.nickname, signals.age, signals.heightCm ?? null, signals.gender ?? null, signals.preferredGender ?? null, signals.minPartnerHeightCm ?? null, signals.meetingLocation, signals.ageBand, signals.energy, signals.mbti ?? null, signals.spirit, signals.flavor, signals.cocktailId, signals.cocktailName, expiresAt]);
     return { token: existingToken, session: { ...signals, id: existing.id, venueId, invalidatedAt: null } satisfies ServerSession };
   }
   const token = createRawSessionToken();
   const id = randomUUID();
-  await db.query(`INSERT INTO tonight_sessions (id, token_hash, nickname, age, meeting_location, age_band, energy, mbti, spirit, flavor, cocktail_id, cocktail_name, venue_id, expires_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-    [id, hashToken(token), signals.nickname, signals.age, signals.meetingLocation, signals.ageBand, signals.energy, signals.mbti ?? null, signals.spirit, signals.flavor, signals.cocktailId, signals.cocktailName, venueId, expiresAt]);
+  await db.query(`INSERT INTO tonight_sessions (id, token_hash, nickname, age, height_cm, gender, preferred_gender, min_partner_height_cm, meeting_location, age_band, energy, mbti, spirit, flavor, cocktail_id, cocktail_name, venue_id, expires_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+    [id, hashToken(token), signals.nickname, signals.age, signals.heightCm ?? null, signals.gender ?? null, signals.preferredGender ?? null, signals.minPartnerHeightCm ?? null, signals.meetingLocation, signals.ageBand, signals.energy, signals.mbti ?? null, signals.spirit, signals.flavor, signals.cocktailId, signals.cocktailName, venueId, expiresAt]);
   return { token, session: { ...signals, id, venueId, invalidatedAt: null } satisfies ServerSession };
 }
 

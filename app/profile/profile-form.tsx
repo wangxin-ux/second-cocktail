@@ -61,17 +61,23 @@ function optionalNumberInput(value: string, min: number, max: number) {
   return number >= min && number <= max ? number : undefined;
 }
 
-export default function ProfileForm({ directMatch = false }: { directMatch?: boolean }) {
+export default function ProfileForm({ directMatch = false, agentMode = false }: { directMatch?: boolean; agentMode?: boolean }) {
   const router = useRouter();
   const { profile, isHydrated } = useSecondProfile();
   const { language, t } = useI18n();
   const [numericDraft, setNumericDraft] = useState<{
     age?: string;
+    heightCm?: string;
+    minPartnerHeightCm?: string;
   }>({});
 
   const ageInput = numericDraft.age ?? profile.age?.toString() ?? "";
+  const heightInput = numericDraft.heightCm ?? profile.heightCm?.toString() ?? "";
+  const minPartnerHeightInput = numericDraft.minPartnerHeightCm ?? profile.minPartnerHeightCm?.toString() ?? "";
   const ageIsInvalid =
     ageInput !== "" && optionalNumberInput(ageInput, 18, 99) === undefined;
+  const heightIsInvalid = heightInput !== "" && optionalNumberInput(heightInput, 120, 230) === undefined;
+  const minPartnerHeightIsInvalid = minPartnerHeightInput !== "" && optionalNumberInput(minPartnerHeightInput, 120, 230) === undefined;
   const completedFields = completedProfileFields(profile);
   const directProfileComplete = Boolean(
     profile.nickname?.trim() &&
@@ -88,7 +94,7 @@ export default function ProfileForm({ directMatch = false }: { directMatch?: boo
   }
 
   function updateNumericProfile(
-    key: "age",
+    key: "age" | "heightCm" | "minPartnerHeightCm",
     rawValue: string,
     min: number,
     max: number,
@@ -101,7 +107,7 @@ export default function ProfileForm({ directMatch = false }: { directMatch?: boo
 
   function continueToNextStep(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (ageIsInvalid || (directMatch && !directProfileComplete)) return;
+    if (ageIsInvalid || heightIsInvalid || minPartnerHeightIsInvalid || (directMatch && !directProfileComplete)) return;
     writeSecondProfile(profile);
     router.push(directMatch ? "/match" : "/spirits");
   }
@@ -207,6 +213,64 @@ export default function ProfileForm({ directMatch = false }: { directMatch?: boo
               ) : null}
             </label>
 
+            {agentMode ? <>
+              <label className="grid gap-2">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                  {language === "zh" ? "我的身高" : "My height"}
+                </span>
+                <input
+                  className={inputClass}
+                  aria-invalid={heightIsInvalid}
+                  inputMode="numeric"
+                  maxLength={3}
+                  placeholder="cm"
+                  type="text"
+                  value={heightInput}
+                  onChange={(event) => updateNumericProfile("heightCm", event.target.value, 120, 230, 3)}
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                  {language === "zh" ? "我的性别" : "My gender"}
+                </span>
+                <select className={inputClass} value={profile.gender ?? ""} onChange={(event) => updateProfile("gender", event.target.value as SecondProfile["gender"])}>
+                  <option value="">{t("optional")}</option>
+                  <option value="woman">{language === "zh" ? "女生" : "Woman"}</option>
+                  <option value="man">{language === "zh" ? "男生" : "Man"}</option>
+                  <option value="nonbinary">{language === "zh" ? "非二元" : "Non-binary"}</option>
+                </select>
+              </label>
+              <label className="grid gap-2">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                  {language === "zh" ? "想认识" : "Looking for"}
+                </span>
+                <select className={inputClass} value={profile.preferredGender ?? "any"} onChange={(event) => updateProfile("preferredGender", event.target.value as SecondProfile["preferredGender"])}>
+                  <option value="any">{language === "zh" ? "不限" : "Anyone"}</option>
+                  <option value="woman">{language === "zh" ? "女生" : "Women"}</option>
+                  <option value="man">{language === "zh" ? "男生" : "Men"}</option>
+                  <option value="nonbinary">{language === "zh" ? "非二元" : "Non-binary people"}</option>
+                </select>
+              </label>
+              <label className="grid gap-2">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
+                  {language === "zh" ? "对方最低身高" : "Minimum height"}
+                </span>
+                <input
+                  className={inputClass}
+                  aria-invalid={minPartnerHeightIsInvalid}
+                  inputMode="numeric"
+                  maxLength={3}
+                  placeholder={language === "zh" ? "不限" : "Any"}
+                  type="text"
+                  value={minPartnerHeightInput}
+                  onChange={(event) => updateNumericProfile("minPartnerHeightCm", event.target.value, 120, 230, 3)}
+                />
+              </label>
+              <p className="col-span-2 -mt-3 text-[0.62rem] leading-5 text-white/35">
+                {language === "zh" ? "偏好会双向生效：只有双方条件都满足时才会进入候选。" : "Preferences work both ways. A candidate appears only when both people’s conditions are met."}
+              </p>
+            </> : null}
+
             <label className="col-span-2 grid gap-2">
               <span className="text-[0.58rem] font-semibold uppercase tracking-[0.25em] text-white/32">
                 {t("meetingLocation")}
@@ -292,7 +356,7 @@ export default function ProfileForm({ directMatch = false }: { directMatch?: boo
               {directMatch
                 ? (language === "zh" ? "昵称、年龄、见面地点和今晚状态为必填项" : "Nickname, age, meeting location, and tonight’s energy are required")
                 : isHydrated && completedFields > 0
-                ? t("profileSaved", { count: completedFields })
+                ? (agentMode ? (language === "zh" ? `已填写 ${completedFields} 项 · 均可修改` : `${completedFields} fields added · all editable`) : t("profileSaved", { count: completedFields }))
                 : t("profileSkip")}
             </p>
           </div>

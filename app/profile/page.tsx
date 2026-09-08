@@ -7,5 +7,5 @@ export default async function ProfilePage() {
   const venueId = resolveVenueIdFromHost(
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
   );
-  return <ProfileForm directMatch={venueId === "main"} />;
+  return <ProfileForm directMatch={venueId === "main"} agentMode={venueId === "agent"} />;
 }

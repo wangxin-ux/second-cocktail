@@ -3,6 +3,9 @@ import { Manrope } from "next/font/google";
 import "./globals.css";
 import LanguageProvider from "./language-provider";
 import TonightAgeGuard from "./tonight-age-guard";
+import AgentAssistant from "./agent-assistant";
+import { headers } from "next/headers";
+import { resolveVenueIdFromHost } from "@/server/realtime/venue";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -33,14 +36,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const venueId = resolveVenueIdFromHost(requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"));
   return (
     <html lang="en">
-      <body className={`${manrope.variable} antialiased`}><LanguageProvider><TonightAgeGuard>{children}</TonightAgeGuard></LanguageProvider></body>
+      <body className={`${manrope.variable} antialiased`}><LanguageProvider><TonightAgeGuard>{children}</TonightAgeGuard>{venueId === "agent" ? <AgentAssistant /> : null}</LanguageProvider></body>
     </html>
   );
 }

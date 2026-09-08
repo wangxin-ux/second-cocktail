@@ -6,6 +6,7 @@ import type { CanonicalMatchState, MeetingArea } from "./socket-events";
 import type { ServerSession } from "./session";
 import { randomUUID } from "./validation";
 import { getMeetingAreas } from "./venue-config";
+import { mutuallyMatchesPreferences } from "@/lib/second/match-preferences";
 
 const candidateLifetimeSeconds = 90;
 const connectionLifetimeSeconds = 5 * 60;
@@ -50,11 +51,11 @@ function candidateFromSession(viewer: ServerSession, session: ServerSession): Ca
 
 async function sessionById(client: Pick<PoolClient, "query">, id: string): Promise<ServerSession | null> {
   const result = await client.query<{
-    id: string; nickname: string; age: number; meeting_location: string; age_band: number; energy: ServerSession["energy"]; mbti: ServerSession["mbti"] | null;
+    id: string; nickname: string; age: number; height_cm: number | null; gender: ServerSession["gender"] | null; preferred_gender: ServerSession["preferredGender"] | null; min_partner_height_cm: number | null; meeting_location: string; age_band: number; energy: ServerSession["energy"]; mbti: ServerSession["mbti"] | null;
     spirit: ServerSession["spirit"]; flavor: ServerSession["flavor"]; cocktail_id: string; cocktail_name: string; venue_id: string; invalidated_at: string | null;
-  }>(`SELECT id,nickname,age,meeting_location,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,venue_id,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
+  }>(`SELECT id,nickname,age,height_cm,gender,preferred_gender,min_partner_height_cm,meeting_location,age_band,energy,mbti,spirit,flavor,cocktail_id,cocktail_name,venue_id,invalidated_at FROM tonight_sessions WHERE id=$1 AND invalidated_at IS NULL AND expires_at>NOW()`, [id]);
   const row = result.rows[0];
-  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, meetingLocation: row.meeting_location, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
+  return row ? { id: row.id, venueId: row.venue_id, nickname: row.nickname, age: row.age, ...(row.height_cm ? { heightCm: row.height_cm } : {}), ...(row.gender ? { gender: row.gender } : {}), ...(row.preferred_gender ? { preferredGender: row.preferred_gender } : {}), ...(row.min_partner_height_cm ? { minPartnerHeightCm: row.min_partner_height_cm } : {}), meetingLocation: row.meeting_location, ageBand: row.age_band, energy: row.energy, ...(row.mbti ? { mbti: row.mbti } : {}), spirit: row.spirit, flavor: row.flavor, cocktailId: row.cocktail_id, cocktailName: row.cocktail_name, invalidatedAt: row.invalidated_at } : null;
 }
 
 async function pairFor(client: Pick<PoolClient, "query">, sessionId: string, lock = false): Promise<PairRow | null> {
@@ -114,8 +115,12 @@ async function tryCreatePair(client: PoolClient, session: ServerSession): Promis
   const candidates = await client.query<{ session_id: string }>(`SELECT q.session_id FROM queue_entries q JOIN tonight_sessions s ON s.id=q.session_id
     WHERE q.status='waiting' AND q.session_id<>$1 AND q.expires_at>NOW() AND q.last_seen_at>NOW()-($2 || ' seconds')::interval
       AND q.venue_id=$3 AND s.venue_id=$3 AND s.invalidated_at IS NULL AND s.expires_at>NOW()
-    FOR UPDATE OF q SKIP LOCKED`, [session.id, presenceGraceSeconds, session.venueId]);
-  const other = (await Promise.all(candidates.rows.map((row) => sessionById(client, row.session_id)))).filter((value): value is ServerSession => Boolean(value)).sort((a, b) => score(session, b) - score(session, a))[0];
+      AND ($4::smallint IS NULL OR s.height_cm >= $4)
+      AND (s.min_partner_height_cm IS NULL OR ($5::smallint IS NOT NULL AND $5 >= s.min_partner_height_cm))
+      AND ($6::varchar IS NULL OR $6='any' OR s.gender=$6)
+      AND (s.preferred_gender IS NULL OR s.preferred_gender='any' OR ($7::varchar IS NOT NULL AND s.preferred_gender=$7))
+    FOR UPDATE OF q SKIP LOCKED`, [session.id, presenceGraceSeconds, session.venueId, session.minPartnerHeightCm ?? null, session.heightCm ?? null, session.preferredGender ?? null, session.gender ?? null]);
+  const other = (await Promise.all(candidates.rows.map((row) => sessionById(client, row.session_id)))).filter((value): value is ServerSession => Boolean(value)).filter((candidate) => mutuallyMatchesPreferences(session, candidate)).sort((a, b) => score(session, b) - score(session, a))[0];
   if (!other) return null;
   await client.query("UPDATE queue_entries SET status='matched' WHERE session_id=ANY($1::uuid[]) AND status='waiting'", [[session.id, other.id]]);
   const pairId = randomUUID();

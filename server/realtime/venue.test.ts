@@ -7,6 +7,7 @@ test("resolves the root and one bar subdomain into separate venues", () => {
   assert.equal(resolveVenueIdFromHost("xinxinyuntu.top"), "main");
   assert.equal(resolveVenueIdFromHost("www.xinxinyuntu.top"), "main");
   assert.equal(resolveVenueIdFromHost("lab.xinxinyuntu.top"), "lab");
+  assert.equal(resolveVenueIdFromHost("agent.xinxinyuntu.top"), "agent");
   assert.equal(resolveVenueIdFromHost("other.example.com"), null);
   assert.equal(resolveVenueIdFromHost("nested.lab.xinxinyuntu.top"), null);
 });

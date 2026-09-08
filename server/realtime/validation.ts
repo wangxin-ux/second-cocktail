@@ -4,6 +4,8 @@ const energies = ["open", "curious", "slow", "celebrating"] as const;
 const mbtis = ["INTJ","INTP","ENTJ","ENTP","INFJ","INFP","ENFJ","ENFP","ISTJ","ISFJ","ESTJ","ESFJ","ISTP","ISFP","ESTP","ESFP"] as const;
 const spirits = ["gin", "vodka", "rum", "tequila", "whisky", "brandy"] as const;
 const flavors = ["sour", "sweet", "bitter", "fruity", "refreshing", "bold"] as const;
+const genders = ["woman", "man", "nonbinary"] as const;
+const genderPreferences = ["any", ...genders] as const;
 
 function string(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -12,6 +14,10 @@ function string(value: unknown, max: number) {
 export type TonightSignals = {
   nickname: string;
   age: number;
+  heightCm?: number;
+  gender?: (typeof genders)[number];
+  preferredGender?: (typeof genderPreferences)[number];
+  minPartnerHeightCm?: number;
   meetingLocation: string;
   ageBand: number;
   energy: (typeof energies)[number];
@@ -34,8 +40,12 @@ export function validateTonightSignals(value: unknown): TonightSignals | null {
   const spirit = spirits.find((item) => item === input.spirit);
   const flavor = flavors.find((item) => item === input.flavor);
   const mbti = mbtis.find((item) => item === input.mbti);
+  const heightCm = typeof input.heightCm === "number" && Number.isInteger(input.heightCm) && input.heightCm >= 120 && input.heightCm <= 230 ? input.heightCm : undefined;
+  const minPartnerHeightCm = typeof input.minPartnerHeightCm === "number" && Number.isInteger(input.minPartnerHeightCm) && input.minPartnerHeightCm >= 120 && input.minPartnerHeightCm <= 230 ? input.minPartnerHeightCm : undefined;
+  const gender = genders.find((item) => item === input.gender);
+  const preferredGender = genderPreferences.find((item) => item === input.preferredGender);
   if (!nickname || !meetingLocation || age < 18 || age > 99 || !energy || !spirit || !flavor || !cocktailId || !cocktailName) return null;
-  return { nickname, age, meetingLocation, ageBand: Math.floor(age / 5) * 5, energy, ...(mbti ? { mbti } : {}), spirit, flavor, cocktailId, cocktailName };
+  return { nickname, age, ...(heightCm ? { heightCm } : {}), ...(gender ? { gender } : {}), ...(preferredGender ? { preferredGender } : {}), ...(minPartnerHeightCm ? { minPartnerHeightCm } : {}), meetingLocation, ageBand: Math.floor(age / 5) * 5, energy, ...(mbti ? { mbti } : {}), spirit, flavor, cocktailId, cocktailName };
 }
 
 export function createRawSessionToken() {

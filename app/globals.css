@@ -92,6 +92,68 @@ header button, header a { min-height: 2.75rem; }
 [role="dialog"] button, [role="alertdialog"] button { min-height: 3rem; }
 .second-match[data-stage="five_minute_connection"] button { color: #d2cdc4; }
 
+.agent-companion {
+  position: fixed;
+  z-index: 40;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid rgba(231, 208, 169, .42);
+  border-radius: 50%;
+  background: #11100e;
+  color: #c8aa80;
+  box-shadow: 0 .8rem 2.5rem rgba(0, 0, 0, .58), inset 0 0 1.4rem rgba(200, 170, 128, .06);
+}
+.agent-companion__orbit { position: absolute; inset: .48rem; border: 1px solid currentColor; border-radius: 50%; opacity: .42; animation: signal-orbit-turn 11s linear infinite; }
+.agent-companion__orbit::after { content: ""; position: absolute; left: 50%; top: -.16rem; width: .3rem; height: .3rem; border-radius: 50%; background: currentColor; transform: translateX(-50%); }
+.agent-companion__eyes { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: .38rem; }
+.agent-companion__eyes i { width: .27rem; height: .36rem; border-radius: 50%; background: #eadfce; box-shadow: 0 0 .65rem rgba(234, 223, 206, .45); }
+.agent-companion:focus-visible { outline: 2px solid var(--second-ivory); outline-offset: 4px; }
+
+.agent-panel {
+  position: fixed;
+  z-index: 45;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  max-height: 78svh;
+  flex-direction: column;
+  border-top: 1px solid rgba(242, 238, 231, .18);
+  background: #0c0c0b;
+  box-shadow: 0 -2rem 5rem rgba(0, 0, 0, .72);
+}
+.agent-panel__header { display: flex; min-height: 4.5rem; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(242, 238, 231, .1); padding: .8rem 1rem .8rem 1.25rem; }
+.agent-panel__log { min-height: 12rem; overflow-y: auto; overscroll-behavior: contain; padding: 1.25rem; }
+.agent-message { max-width: 88%; margin-bottom: 1rem; }
+.agent-message p { margin: 0; overflow-wrap: anywhere; font-size: .9rem; line-height: 1.55rem; }
+.agent-message--assistant { padding-left: .9rem; border-left: 1px solid rgba(200, 170, 128, .6); }
+.agent-message--assistant p { color: rgba(242, 238, 231, .74); }
+.agent-message--user { margin-left: auto; border-bottom: 1px solid rgba(242, 238, 231, .14); padding: 0 0 .7rem 1rem; text-align: right; }
+.agent-message--user p { color: rgba(242, 238, 231, .48); }
+.agent-apply { display: block; width: 100%; margin-top: .75rem; border: 1px solid rgba(200, 170, 128, .32); border-radius: 4px; background: rgba(200, 170, 128, .08); padding: .65rem .8rem; color: #eadfce; font-size: .72rem; font-weight: 700; }
+.agent-quick-actions { display: flex; gap: .5rem; overflow-x: auto; border-top: 1px solid rgba(242, 238, 231, .08); padding: .75rem 1.25rem; }
+.agent-quick-actions button { min-height: 2.4rem; flex: none; border: 1px solid rgba(242, 238, 231, .12); border-radius: 4px; padding: .55rem .75rem; color: rgba(242, 238, 231, .58); font-size: .7rem; }
+.agent-composer { display: grid; grid-template-columns: minmax(0, 1fr) 3rem; align-items: end; border-top: 1px solid rgba(242, 238, 231, .12); padding: .75rem max(1rem, env(safe-area-inset-right)) max(.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+.agent-composer textarea { max-height: 7rem; min-height: 3rem; resize: none; border: 0; background: transparent; padding: .78rem .5rem; color: #f2eee7; outline: none; font-size: .9rem; line-height: 1.4rem; }
+.agent-composer textarea::placeholder { color: rgba(242, 238, 231, .27); }
+.agent-composer button { width: 3rem; height: 3rem; border: 1px solid rgba(200, 170, 128, .35); border-radius: 50%; color: #eadfce; font-size: 1.1rem; }
+.agent-composer button:disabled { border-color: rgba(242, 238, 231, .1); color: rgba(242, 238, 231, .2); }
+.agent-thinking { display: flex; min-height: 1.5rem; align-items: center; gap: .28rem; }
+.agent-thinking i { width: .25rem; height: .25rem; border-radius: 50%; background: #c8aa80; animation: agent-pulse 1s ease-in-out infinite; }
+.agent-thinking i:nth-child(2) { animation-delay: 150ms; }
+.agent-thinking i:nth-child(3) { animation-delay: 300ms; }
+@keyframes agent-pulse { 50% { opacity: .28; transform: translateY(-.18rem); } }
+
+@media (min-width: 640px) {
+  .agent-panel { left: auto; right: 1rem; bottom: 5.5rem; width: 24rem; max-height: min(42rem, 78svh); border: 1px solid rgba(242, 238, 231, .18); border-radius: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-companion__orbit, .agent-thinking i { animation: none; }
+}
+
 .second-field { min-height: 3.5rem; width: 100%; border: 0; border-bottom: 1px solid var(--second-line); border-radius: 0; background: transparent; padding: .75rem 0; color: var(--second-ivory); outline: none; }
 .second-field:focus { border-color: var(--second-brass); }
 

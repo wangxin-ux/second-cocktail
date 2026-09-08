@@ -43,9 +43,18 @@ export type Zodiac = (typeof zodiacOptions)[number];
 export type Mbti = (typeof mbtiOptions)[number];
 export type TonightEnergy = (typeof energyOptions)[number]["id"];
 
+export const genderOptions = ["woman", "man", "nonbinary"] as const;
+export const genderPreferenceOptions = ["any", ...genderOptions] as const;
+export type Gender = (typeof genderOptions)[number];
+export type GenderPreference = (typeof genderPreferenceOptions)[number];
+
 export type SecondProfile = {
   nickname?: string;
   age?: number;
+  heightCm?: number;
+  gender?: Gender;
+  preferredGender?: GenderPreference;
+  minPartnerHeightCm?: number;
   meetingLocation?: string;
   zodiac?: Zodiac;
   mbti?: Mbti;
@@ -74,6 +83,8 @@ export function sanitizeProfile(value: unknown): SecondProfile {
   const zodiac = zodiacOptions.find((item) => item === profile.zodiac);
   const mbti = mbtiOptions.find((item) => item === profile.mbti);
   const energy = energyOptions.find((item) => item.id === profile.energy)?.id;
+  const gender = genderOptions.find((item) => item === profile.gender);
+  const preferredGender = genderPreferenceOptions.find((item) => item === profile.preferredGender);
 
   return {
     ...(nickname ? { nickname } : {}),
@@ -81,6 +92,14 @@ export function sanitizeProfile(value: unknown): SecondProfile {
     ...(optionalNumber(profile.age, 18, 99) !== undefined
       ? { age: optionalNumber(profile.age, 18, 99) }
       : {}),
+    ...(optionalNumber(profile.heightCm, 120, 230) !== undefined
+      ? { heightCm: optionalNumber(profile.heightCm, 120, 230) }
+      : {}),
+    ...(optionalNumber(profile.minPartnerHeightCm, 120, 230) !== undefined
+      ? { minPartnerHeightCm: optionalNumber(profile.minPartnerHeightCm, 120, 230) }
+      : {}),
+    ...(gender ? { gender } : {}),
+    ...(preferredGender ? { preferredGender } : {}),
     ...(zodiac ? { zodiac } : {}),
     ...(mbti ? { mbti } : {}),
     ...(energy ? { energy } : {}),
