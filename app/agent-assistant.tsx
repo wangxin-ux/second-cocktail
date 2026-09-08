@@ -31,7 +31,7 @@ export default function AgentAssistant() {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const greeting = zh ? "今晚想喝什么，或想认识怎样的人？" : "What would you like to drink, or who would you like to meet tonight?";
+  const greeting = zh ? "宝宝，今晚想喝什么，或想认识怎样的人？" : "Baby, what would you like to drink, or who would you like to meet tonight?";
   const quickPrompts = zh ? ["帮我选一杯清爽的酒", "设置匹配偏好", "打开个人信息"] : ["Choose me a refreshing drink", "Set matching preferences", "Open my profile"];
 
   async function send(override?: string) {
@@ -73,14 +73,15 @@ export default function AgentAssistant() {
       const result = await response.json() as AgentReply;
       setMessages((current) => [...current, { id: id(), role: "assistant", content: result.reply, proposal: result.proposal }]);
     } catch {
-      setMessages((current) => [...current, { id: id(), role: "assistant", content: zh ? "今晚助手暂时没有连上。你仍然可以继续点击页面操作。" : "The assistant is temporarily unavailable. You can keep using the page controls." }]);
+      setMessages((current) => [...current, { id: id(), role: "assistant", content: zh ? "宝宝，今晚助手暂时没有连上。你仍然可以继续点击页面操作。" : "Baby, the assistant is temporarily unavailable. You can keep using the page controls." }]);
     } finally {
       setBusy(false);
     }
   }
 
   function addStatus(content: string) {
-    setMessages((current) => [...current, { id: id(), role: "assistant", content }]);
+    const salutation = zh ? "宝宝，" : "Baby, ";
+    setMessages((current) => [...current, { id: id(), role: "assistant", content: content.startsWith(salutation) ? content : `${salutation}${content}` }]);
   }
 
   function apply(proposal: AgentProposal) {
